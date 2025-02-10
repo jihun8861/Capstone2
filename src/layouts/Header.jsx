@@ -34,6 +34,7 @@ const onClickLogo = () => {
     <Container>
       <Logo onClick={onClickLogo}>홈</Logo>
       <p>헤더입니다.</p>
+      <p>테스트용</p>
     </Container>
   )
 }
