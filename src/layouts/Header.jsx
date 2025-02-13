@@ -37,14 +37,27 @@ const NavItem = styled.div`
 export const Header = () => {
   const navigate = useNavigate();
 
+  const onClickLoginButton = () => {
+    navigate("/signin");
+  };
+  const onClickHomeButton = () => {
+    navigate("/");
+  };
+  const onClickMyPageButton = () => {
+    navigate("/mypage");
+  };
+  const onClickSharePageButton = () => {
+    navigate("/sharepage");
+  };
+
   return (
     <Container>
-      <Logo onClick={() => navigate("/")}>Capstone2</Logo>
+      <Logo onClick={onClickHomeButton}>Capstone2</Logo>
       <Nav>
-        <NavItem onClick={() => navigate("/")}>홈</NavItem>
-        <NavItem onClick={() => navigate("/mypage")}>마이페이지</NavItem>
-        <NavItem onClick={() => navigate("/sharepage")}>공유페이지</NavItem>
-        <NavItem onClick={() => navigate("/signin")}>로그인</NavItem>
+        <NavItem onClick={onClickHomeButton}>홈</NavItem>
+        <NavItem onClick={onClickMyPageButton}>마이페이지</NavItem>
+        <NavItem onClick={onClickSharePageButton}>공유페이지</NavItem>
+        <NavItem onClick={onClickLoginButton}>로그인</NavItem>
       </Nav>
     </Container>
   );
