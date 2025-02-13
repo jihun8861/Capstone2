@@ -20,7 +20,7 @@ export const MainPage = () => {
 
   return (
     <Container>
-      <p>메인페이지입니다.</p>
+      <p>메인페이지입니다</p>
       <button onClick={onClickLoginButton}>로그인 페이지</button>
     </Container>
   );
