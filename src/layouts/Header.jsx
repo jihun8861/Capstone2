@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 const Container = styled.header`
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   width: 100%;
   height: 80px;
   padding: 0 20px;
@@ -19,9 +19,14 @@ const Logo = styled.div`
   font-size: 24px;
   font-weight: bold;
   cursor: pointer;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
 `;
 
 const Nav = styled.nav`
+  position: absolute;
+  right: 20px;
   display: flex;
   gap: 20px;
 `;

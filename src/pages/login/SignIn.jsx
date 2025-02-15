@@ -1,5 +1,7 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import styled from "styled-components";
-import colors from "../../color/colors"; // 기존 프로젝트 색상과 통합
+import axios from "axios";
 
 const Container = styled.div`
   display: flex;
@@ -13,40 +15,41 @@ const Container = styled.div`
 
 const FormWrapper = styled.div`
   background: white;
-  padding: 40px;
-  border-radius: 10px;
-  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0px 6px 12px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 380px;
+  width: 450px;
+  margin-top: -300px;
 `;
 
 const Title = styled.h2`
   margin-bottom: 20px;
-  font-size: 24px;
+  font-size: 50px;
   font-weight: bold;
   color: #222;
 `;
 
 const Input = styled.input`
   width: 100%;
-  padding: 14px;
-  margin: 8px 0;
+  padding: 16px;
+  margin: 15px 0;
   border: 1px solid #ccc;
-  border-radius: 5px;
-  font-size: 16px;
+  border-radius: 6px;
+  font-size: 17px;
 `;
 
 const Button = styled.button`
   width: 100%;
-  padding: 14px;
-  margin-top: 15px;
-  background-color: #004aad; /* 기존 오렌지 -> 네이비 */
+  padding: 16px;
+  margin-top: 20px;
+  background-color: #004aad;
   color: white;
-  font-size: 16px;
+  font-size: 18px;
   border: none;
-  border-radius: 5px;
+  border-radius: 6px;
   cursor: pointer;
   font-weight: bold;
   transition: background 0.3s ease;
@@ -58,16 +61,16 @@ const Button = styled.button`
 
 const SocialLoginWrapper = styled.div`
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   width: 100%;
-  margin-top: 10px;
+  margin-top: 25px;
 `;
 
 const SocialLoginButton = styled.button`
-  width: 48%;
-  padding: 12px;
+  width: 100%;
+  padding: 14px;
   border: 1px solid #ccc;
-  border-radius: 5px;
+  border-radius: 6px;
   cursor: pointer;
   font-size: 16px;
   display: flex;
@@ -96,7 +99,7 @@ const SocialLoginButton = styled.button`
 
 const SignUpLink = styled.div`
   margin-top: 15px;
-  font-size: 14px;
+  font-size: 15px;
   color: #555;
   text-align: center;
 
@@ -108,17 +111,65 @@ const SignUpLink = styled.div`
 `;
 
 export const SignInPage = () => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const navigate = useNavigate();
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+
+    try {
+      const response = await axios.post(
+        "https://port-0-edcustom-lxx6l4ha4fc09fa0.sel5.cloudtype.app/login",
+        {
+          email,
+          password,
+        }
+      );
+
+      console.log("서버 응답:", response.data);
+
+      if (response.data.success) {
+        alert("로그인 성공!");
+        localStorage.setItem("token", response.data.token);
+        navigate("/");
+      } else {
+        alert("아이디 또는 비밀번호가 틀렸습니다.");
+      }
+    } catch (error) {
+      console.error(
+        "로그인 에러:",
+        error.response ? error.response.data : error.message
+      );
+      alert(
+        "서버 오류: " +
+          (error.response ? error.response.data.message : "알 수 없는 오류")
+      );
+    }
+  };
+
   return (
     <Container>
       <FormWrapper>
         <Title>로그인</Title>
-        <Input type="text" placeholder="아이디" />
-        <Input type="password" placeholder="비밀번호" />
-        <Button type="submit">로그인</Button>
+        <Input
+          type="text"
+          placeholder="아이디"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <Input
+          type="password"
+          placeholder="비밀번호"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+        <Button type="submit" onClick={handleLogin}>
+          로그인
+        </Button>
 
         <SocialLoginWrapper>
           <SocialLoginButton className="kakao">카카오 로그인</SocialLoginButton>
-          <SocialLoginButton className="naver">네이버 로그인</SocialLoginButton>
         </SocialLoginWrapper>
 
         <SignUpLink>
