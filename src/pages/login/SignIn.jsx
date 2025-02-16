@@ -116,6 +116,14 @@ export const SignInPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+  const REST_API_KEY = `9b8440c52cc5a7dd32647c76aade83d3`;
+  const REDIRECT_URI = `http://localhost:5173/KakaoRedirect`;
+  const KAKAO_AUTH_URL = `https://kauth.kakao.com/oauth/authorize?client_id=${REST_API_KEY}&redirect_uri=${REDIRECT_URI}&response_type=code`;
+
+  const handleKakaoLogin = () => {
+    window.location.href = KAKAO_AUTH_URL;
+  };
+
   const handleLogin = async (e) => {
     e.preventDefault();
 
@@ -142,7 +150,7 @@ export const SignInPage = () => {
 
       if (response.status === 200 && response.data.token) {
         localStorage.setItem("token", response.data.token);
-        navigate("/");
+        window.location.href = "/";
         console.log("token: ", response.data.token);
       } else {
         alert("로그인 실패: 서버 응답이 올바르지 않습니다.");
@@ -182,7 +190,9 @@ export const SignInPage = () => {
         </Button>
 
         <SocialLoginWrapper>
-          <SocialLoginButton className="kakao">카카오 로그인</SocialLoginButton>
+          <SocialLoginButton onClick={handleKakaoLogin} className="kakao">
+            카카오 로그인
+          </SocialLoginButton>
         </SocialLoginWrapper>
 
         <SignUpLink>

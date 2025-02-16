@@ -1,5 +1,6 @@
 import styled from "styled-components";
 import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 
 const Container = styled.header`
   display: flex;
@@ -41,17 +42,49 @@ const NavItem = styled.div`
 
 export const Header = () => {
   const navigate = useNavigate();
+  const [isLogIn, setIsLogIn] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    setIsLogIn(!!token);
+  }, []);
 
   const onClickLoginButton = () => {
     navigate("/signin");
   };
+
+  const onClickLogoutButton = () => {
+    const confirmLogout = window.confirm("정말 로그아웃 하시겠습니까?");
+
+    if (confirmLogout) {
+      localStorage.removeItem("token");
+      setIsLogIn(false);
+      navigate("/");
+    }
+  };
+
   const onClickHomeButton = () => {
+    if (isLogIn) {
+      console.log("token:", localStorage.getItem("token"));
+    }
     navigate("/");
   };
+
   const onClickMyPageButton = () => {
+    if (!isLogIn) {
+      alert("로그인이 필요한 서비스입니다.");
+      navigate("/signin");
+      return;
+    }
     navigate("/mypage");
   };
+
   const onClickSharePageButton = () => {
+    if (!isLogIn) {
+      alert("로그인이 필요한 서비스입니다.");
+      navigate("/signin");
+      return;
+    }
     navigate("/sharepage");
   };
 
@@ -62,7 +95,11 @@ export const Header = () => {
         <NavItem onClick={onClickHomeButton}>홈</NavItem>
         <NavItem onClick={onClickMyPageButton}>마이페이지</NavItem>
         <NavItem onClick={onClickSharePageButton}>공유페이지</NavItem>
-        <NavItem onClick={onClickLoginButton}>로그인</NavItem>
+        {isLogIn ? (
+          <NavItem onClick={onClickLogoutButton}>로그아웃</NavItem>
+        ) : (
+          <NavItem onClick={onClickLoginButton}>로그인</NavItem>
+        )}
       </Nav>
     </Container>
   );
