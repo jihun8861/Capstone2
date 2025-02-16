@@ -4,7 +4,7 @@ import { Footer } from "./Footer";
 
 const Container = styled.div`
   width: 100%;
-  height: auto;  
+  height: auto;
 `;
 
 const Main = styled.div`
@@ -16,7 +16,7 @@ const Main = styled.div`
 const Layout = ({ mainContent }) => {
   return (
     <Container>
-      <Header/>
+      <Header />
       <Main>{mainContent}</Main>
       <Footer />
     </Container>
