@@ -140,26 +140,21 @@ export const SignInPage = () => {
         }
       );
 
-      console.log("response: ", response);
-
-      if (response.status === 200) {
+      if (response.status === 200 && response.data.token) {
         localStorage.setItem("token", response.data.token);
         navigate("/");
+        console.log("token: ", response.data.token);
       } else {
         alert("로그인 실패: 서버 응답이 올바르지 않습니다.");
       }
     } catch (error) {
       if (error.response) {
-        // 요청이 전송되었고, 서버는 2xx 외의 상태 코드로 응답
         console.log("data: ", error.response.data);
         console.log("status: ", error.response.status);
         console.log("headers: ", error.response.headers);
       } else if (error.request) {
-        // 요청이 전송되었지만, 응답이 수신되지 않음
-        // 'error.request'는 브라우저에서 XMLHtpRequest 인스턴스, node.js에서는 http.ClientRequest 인스턴스
         console.log("request: ", error.request);
       } else {
-        // 오류가 발생한 요청을 설정하는 동안 문제가 발생
         console.log("Error", error.message);
       }
       console.log("error.config: ", error.config);
