@@ -26,10 +26,19 @@ const FormWrapper = styled.div`
 `;
 
 const Title = styled.h2`
-  margin-bottom: 20px;
+  margin-bottom: 90px;
   font-size: 50px;
   font-weight: bold;
   color: #222;
+`;
+
+const InputText = styled.div`
+  font-size: 15px;
+  font-weight: bold;
+  text-align: left;
+  width: 100%;
+  margin-top: 10px;
+  margin-bottom: -5px;
 `;
 
 const Input = styled.input`
@@ -135,10 +144,7 @@ export const SignInPage = () => {
     try {
       const response = await axios.post(
         "https://port-0-edcustom-lxx6l4ha4fc09fa0.sel5.cloudtype.app/login",
-        {
-          email,
-          password,
-        },
+        { email, password },
         {
           headers: {
             "Content-Type": "application/json;charset=UTF-8",
@@ -160,12 +166,19 @@ export const SignInPage = () => {
         console.log("data: ", error.response.data);
         console.log("status: ", error.response.status);
         console.log("headers: ", error.response.headers);
+
+        if (error.response.status === 500) {
+          alert("아이디 또는 비밀번호가 틀렸습니다."); // 500이 뜰 경우 로그인 실패로 처리
+        } else {
+          alert("로그인 중 문제가 발생했습니다. 다시 시도해주세요.");
+        }
       } else if (error.request) {
         console.log("request: ", error.request);
+        alert("서버 응답이 없습니다. 네트워크 상태를 확인해주세요.");
       } else {
         console.log("Error", error.message);
+        alert("예기치 못한 오류가 발생했습니다.");
       }
-      console.log("error.config: ", error.config);
     }
   };
 
@@ -173,12 +186,14 @@ export const SignInPage = () => {
     <Container>
       <FormWrapper>
         <Title>로그인</Title>
+        <InputText>ID</InputText>
         <Input
           type="text"
           placeholder="아이디"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
+        <InputText>PASSWORD</InputText>
         <Input
           type="password"
           placeholder="비밀번호"

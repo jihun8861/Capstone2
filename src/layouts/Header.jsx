@@ -17,7 +17,7 @@ const Container = styled.header`
 `;
 
 const Logo = styled.div`
-  font-size: 24px;
+  font-size: 44px;
   font-weight: bold;
   cursor: pointer;
   position: absolute;
@@ -27,9 +27,9 @@ const Logo = styled.div`
 
 const Nav = styled.nav`
   position: absolute;
-  right: 20px;
+  right: 30px;
   display: flex;
-  gap: 20px;
+  gap: 25px;
 `;
 
 const NavItem = styled.div`
