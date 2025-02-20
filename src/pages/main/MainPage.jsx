@@ -1,27 +1,51 @@
 import styled from "styled-components";
-import { useNavigate } from "react-router-dom";
-import colors from "../../color/colors";
+import { MainBanner } from "../../components/home/MainBanner";
+import { ItemFrame1 } from "../../components/home/ItemFrame1";
+import { ItemFrame2 } from "../../components/home/ItemFrame2";
 
 const Container = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
+  height: auto;
+`;
+
+const Frame1 = styled.div`
+  display: flex;
+  width: 100%;
+  height: auto;
+  border: solid 1px;
+`;
+
+const Frame2 = styled.div`
+  display: flex;
+  width: 100%;
+  height: auto;
+  border: solid 1px;
+`;
+
+const Frame3 = styled.div`
+  display: flex;
+  align-items: center;
   justify-content: center;
-  height: 1000px;
-  background-color: ${colors.babyblue};
+  width: 100%;
+  height: 500px;
+  border: solid 1px;
 `;
 
 export const MainPage = () => {
-  const naviagte = useNavigate();
-
-  const onClickLoginButton = () => {
-    naviagte("/signin");
-  };
-
   return (
     <Container>
-      <p>메인페이지입니다</p>
-      <button onClick={onClickLoginButton}>로그인 페이지</button>
+      <MainBanner />
+      <Frame1>
+        <ItemFrame1 />
+      </Frame1>
+
+      <Frame2>
+        <ItemFrame2/>
+      </Frame2>
+
+      <Frame3>공유 컴포넌트</Frame3>
     </Container>
   );
 };

@@ -1,5 +1,6 @@
 import styled from "styled-components";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
 
 const Container = styled.header`
   display: flex;
@@ -11,8 +12,10 @@ const Container = styled.header`
   position: fixed;
   top: 0;
   z-index: 100;
-  background-color: white;
-  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+  background-color: ${(props) => (props.scrolled ? "white" : "transparent")};
+  border-bottom: ${(props) =>
+    props.showBorder ? "1px solid #e8e8e8" : "1px solid transparent"};
+  transition: background-color 0.3s ease-in-out, border-bottom 0.3s ease-in-out;
 `;
 
 const Logo = styled.div`
@@ -29,19 +32,43 @@ const Nav = styled.nav`
 const NavItem = styled.div`
   cursor: pointer;
   font-size: 18px;
-  &:hover {
-    color: #007bff;
-  }
+  font-weight: bold;
 `;
 
 export const Header = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [scrolled, setScrolled] = useState(false);
+  const [showBorder, setShowBorder] = useState(false);
+
+  const fixedPages = ["/signin"];
+
+  useEffect(() => {
+    if (fixedPages.includes(location.pathname)) {
+      setScrolled(true);
+      setShowBorder(true);
+    } else {
+      setScrolled(false);
+      setShowBorder(false);
+    }
+
+    const handleScroll = () => {
+      if (!fixedPages.includes(location.pathname)) {
+        setScrolled(window.scrollY > 50);
+        setShowBorder(window.scrollY > 50);
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, [location.pathname]);
 
   return (
-    <Container>
+    <Container scrolled={scrolled} showBorder={showBorder}>
       <Logo onClick={() => navigate("/")}>Capstone2</Logo>
       <Nav>
-        <NavItem onClick={() => navigate("/")}>홈</NavItem>
         <NavItem onClick={() => navigate("/mypage")}>마이페이지</NavItem>
         <NavItem onClick={() => navigate("/sharepage")}>공유페이지</NavItem>
         <NavItem onClick={() => navigate("/signin")}>로그인</NavItem>
