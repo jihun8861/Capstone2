@@ -16,7 +16,7 @@ const TitleText = styled.h2`
   text-align: center;
   margin-bottom: 100px;
   font-size: 36px;
-  margin-top: -150px;
+  margin-top: 0px;
 `;
 
 const Form = styled.div`

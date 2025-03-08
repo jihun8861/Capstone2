@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import axios from "axios";
 
-
 const Container = styled.div`
   display: flex;
   flex-direction: column;
@@ -23,7 +22,7 @@ const FormWrapper = styled.div`
   flex-direction: column;
   align-items: center;
   width: 450px;
-  margin-top: -300px;
+  margin-top: 0px;
 `;
 
 const Title = styled.h2`
