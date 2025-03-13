@@ -11,9 +11,9 @@ export const useAuthStore = create((set) => ({
       set({ loading: false });
       return;
     }
-
+  
     set({ loading: true });
-
+  
     try {
       const response = await axios.post(
         "https://port-0-edcustom-lxx6l4ha4fc09fa0.sel5.cloudtype.app/findbodybytoken",

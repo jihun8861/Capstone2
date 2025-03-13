@@ -5,7 +5,7 @@ import { useAuthStore } from "../../api/useAuthStore ";
 
 export const KakaoRedirect = () => {
   const navigate = useNavigate();
-  const { fetchUserData } = useAuthStore(); // Zustand에서 fetchUserData 함수 가져오기
+  const { fetchUserData } = useAuthStore();
   const urlParams = new URLSearchParams(window.location.search);
   const code = urlParams.get("code");
 
@@ -33,13 +33,10 @@ export const KakaoRedirect = () => {
         console.log("✅ 로그인 성공:", response.data);
         localStorage.setItem("token", response.data.data.token);
 
-        // ✅ 로그인 후 바로 유저 정보 가져오기
         await fetchUserData();
 
-        // ✅ 이동할 페이지 결정
         let redirectTo = localStorage.getItem("redirectTo") || "/";
 
-        // ✅ 로그인 페이지에 머물러 있지 않도록 보장
         if (redirectTo === "/signin") {
           redirectTo = "/";
         }
