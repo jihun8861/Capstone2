@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import axios from "axios";
 
-
 const Container = styled.div`
   display: flex;
   flex-direction: column;
@@ -23,7 +22,7 @@ const FormWrapper = styled.div`
   flex-direction: column;
   align-items: center;
   width: 450px;
-  margin-top: -300px;
+  margin-top: 0px;
 `;
 
 const Title = styled.h2`
@@ -156,18 +155,17 @@ export const SignInPage = () => {
         }
       );
 
-      if (response.status === 200 && response.data.token) {
-        localStorage.setItem("token", response.data.token);
+      if (response.data.status === "OK" && response.data.data.token) {
+        localStorage.setItem("token", response.data.data.token);
         window.location.href = "/";
-        console.log("token: ", response.data.token);
       } else {
         alert("로그인 실패: 서버 응답이 올바르지 않습니다.");
       }
     } catch (error) {
       if (error.response) {
-        console.log("data: ", error.response.data);
-        console.log("status: ", error.response.status);
-        console.log("headers: ", error.response.headers);
+        console.log("data: ", error.response.data.data);
+        console.log("status: ", error.response.data.status);
+        console.log("headers: ", error.response.data.headers);
 
         if (error.response.status === 500) {
           alert("아이디 또는 비밀번호가 틀렸습니다."); // 500이 뜰 경우 로그인 실패로 처리
