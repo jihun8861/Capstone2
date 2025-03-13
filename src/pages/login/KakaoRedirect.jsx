@@ -31,7 +31,7 @@ export const KakaoRedirect = () => {
       )
       .then(async (response) => {
         console.log("✅ 로그인 성공:", response.data);
-        localStorage.setItem("token", response.data.data);
+        localStorage.setItem("token", response.data.data.token);
 
         // ✅ 로그인 후 바로 유저 정보 가져오기
         await fetchUserData();

@@ -156,7 +156,7 @@ export const SignInPage = () => {
       );
 
       if (response.data.status === "OK" && response.data.data.token) {
-        localStorage.setItem("token", response.data.token);
+        localStorage.setItem("token", response.data.data.token);
         window.location.href = "/";
       } else {
         alert("로그인 실패: 서버 응답이 올바르지 않습니다.");
