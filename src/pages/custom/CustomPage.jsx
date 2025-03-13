@@ -9,22 +9,25 @@ const Container = styled.div`
   flex-direction: column;
   padding-top: 80px;
   height: 100vh;
+  background-color: #f8f9fa;
 `;
 
 const HeaderLine = styled.div`
   width: 100%;
-  height: 10px;
+  height: 12px;
   background-color: black;
 `;
 
 const HeaderFrame = styled.div`
   width: 100%;
-  height: 60px;
+  height: 80px;
   display: flex;
   align-items: center;
   padding: 0 20px;
-  border-bottom: solid 1px #e1e1e1;
+  border-bottom: solid 1px #ddd;
   justify-content: space-between;
+  background-color: white;
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.05);
 `;
 
 const LeftSection = styled.div`
@@ -42,7 +45,7 @@ const CustomImage = styled.img`
 const Title = styled.p`
   font-size: 19px;
   padding-left: 5px;
-  color: #666666;
+  color: #333;
   font-weight: bold;
 `;
 
@@ -54,25 +57,46 @@ const RightSection = styled.div`
 const Button = styled.button`
   background-color: white;
   border: 1px solid #ddd;
-  border-radius: 5px;
-  padding: 8px 12px;
+  border-radius: 8px;
+  padding: 10px 16px;
   font-size: 14px;
   cursor: pointer;
-  transition: all 0.2s ease-in-out;
+  transition: all 0.3s ease-in-out;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 
   &:hover {
     background-color: ${colors.babyblue};
     color: white;
+    transform: scale(1.05);
   }
 `;
 
 const CustomFrame = styled.div`
+  position: relative;
   width: 100%;
   flex-grow: 1;
   display: flex;
   justify-content: center;
   align-items: center;
-  background-color: #f1f2ed;
+  background-color: #e9ecef;
+`;
+
+const SelectFrame = styled.div`
+  position: absolute;
+  top: 50%;
+  left: 5%;
+  transform: translateY(-50%);
+  width: 280px;
+  height: 340px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  border: none;
 `;
 
 export const CustomPage = () => {
@@ -85,7 +109,7 @@ export const CustomPage = () => {
       <HeaderFrame>
         <LeftSection>
           <CustomImage src="/images/custom.png" alt="Custom Keyboard" />
-          <Title>{selectedSize}</Title> 
+          <Title>{selectedSize}</Title>
         </LeftSection>
         <RightSection>
           <Button>다시 시작하기</Button>
@@ -95,11 +119,15 @@ export const CustomPage = () => {
       </HeaderFrame>
 
       <CustomFrame>
-        <ThreeDModel/>
+        <SelectFrame>
+          <p style={{ fontSize: "16px", fontWeight: "bold", color: "#333" }}>
+            키보드 설정 패널
+          </p>
+        </SelectFrame>
+        <ThreeDModel />
       </CustomFrame>
-        
+
       <ColorSelect />
     </Container>
   );
 };
-
