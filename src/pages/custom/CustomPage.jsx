@@ -1,6 +1,6 @@
 import styled from "styled-components";
+import { useParams } from "react-router-dom";
 import colors from "../../color/colors";
-import { useLocation } from "react-router-dom";
 import { ColorSelect } from "../../color/ColorSelect";
 import { ThreeDModel } from "../../components/model/ThreeDModel";
 
@@ -36,15 +36,15 @@ const LeftSection = styled.div`
 `;
 
 const CustomImage = styled.img`
-  width: 125px;
+  width: 130px;
   height: 32px;
-  padding-right: 5px;
+  padding-right: 10px;
   border-right: solid 1px #e1e1e1;
 `;
 
 const Title = styled.p`
   font-size: 19px;
-  padding-left: 5px;
+  margin-left: 10px;
   color: #333;
   font-weight: bold;
 `;
@@ -100,8 +100,8 @@ const SelectFrame = styled.div`
 `;
 
 export const CustomPage = () => {
-  const location = useLocation();
-  const selectedSize = location.state?.selectedSize || "Custom Keyboard";
+  const { size } = useParams();
+  const selectedSize = size ? `${size}%` : "Custom Keyboard";
 
   return (
     <Container>
@@ -120,8 +120,11 @@ export const CustomPage = () => {
 
       <CustomFrame>
         <SelectFrame>
-          <p style={{ fontSize: "16px", fontWeight: "bold", color: "#333" }}>
-            키보드 설정 패널
+          <p style={{ fontSize: "24px", fontWeight: "bold", color: "#333",cursor:"pointer" }}>
+            스위치
+          </p>
+          <p style={{ fontSize: "24px", fontWeight: "bold", color: "#333",cursor:"pointer" }}>
+            키캡
           </p>
         </SelectFrame>
         <ThreeDModel />

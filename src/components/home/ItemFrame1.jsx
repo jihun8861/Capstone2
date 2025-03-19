@@ -79,7 +79,7 @@ export const ItemFrame1 = () => {
   const navigate = useNavigate();
 
   const handleClick = (size) => {
-    navigate("/custompage", { state: { selectedSize: size } });
+    navigate(`/custompage/${size}`);
   };
 
   return (
@@ -96,9 +96,9 @@ export const ItemFrame1 = () => {
           </Description>
         </TextBox>
         <RightFrame>
-          <KeyboardFrame onClick={() => handleClick("60%")}>60%</KeyboardFrame>
-          <KeyboardFrame onClick={() => handleClick("80%")}>80%</KeyboardFrame>
-          <KeyboardFrame onClick={() => handleClick("100%")}>
+          <KeyboardFrame onClick={() => handleClick("60")}>60%</KeyboardFrame>
+          <KeyboardFrame onClick={() => handleClick("80")}>80%</KeyboardFrame>
+          <KeyboardFrame onClick={() => handleClick("100")}>
             100%
           </KeyboardFrame>
         </RightFrame>
