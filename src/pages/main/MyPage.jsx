@@ -1,6 +1,7 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import styled from "styled-components";
+import UserEdit from "../mypage/UserEdit"; // 새로 만든 UserEdit.jsx 가져오기
 
 const Container = styled.div`
   display: flex;
@@ -47,7 +48,7 @@ export const MyPage = () => {
   const renderContent = () => {
     switch (selectedMenu) {
       case "회원정보 수정":
-        return <div>회원정보 수정 화면</div>;
+        return <UserEdit />; // ✅ UserEdit 컴포넌트 렌더링
       case "나의 커스텀 키보드":
         return <div>커스텀 키보드 화면</div>;
       case "관심상품":
