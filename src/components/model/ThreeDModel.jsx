@@ -13,39 +13,43 @@ const Container = styled.div`
   align-items: center;
 `;
 
-// 모델 크기별 스케일 조정
 const MODEL_SCALES = {
   "60": 28,
   "80": 26,
   "100": 25,
 };
 
-// 초기 위치를 더 왼쪽으로 설정 (x값을 더 작게)
-const INITIAL_POSITIONS = [
-  [-1.5, 0, 0], // BottomCase
-  [-1.5, 1, 0], // PCB
-  [-1.5, 2, 0], // Plate
-  [-1.5, 3, 0], // Screw
-  [-1.5, 4, 0], // TopCase
-  [-1.5, 5, 0], // Stabilizers
-];
+const INITIAL_POSITIONS = {
+  base: [
+    [-1.5, 0, 0],
+    [-1.5, 1, 0],
+    [-1.5, 2, 0],
+    [-1.5, 3, 0],
+    [-1.5, 4, 0],
+    [-1.5, 5, 0],
+  ],
+  switch: [-1.5, 5, 0],
+  keycap: [-1.5, 5, 0],
+};
 
-// 최종 위치도 왼쪽으로 설정
-const FINAL_POSITIONS = [
-  [-1.5, 0, 0], // BottomCase
-  [-1.5, 0, 0], // PCB
-  [-1.5, 0, 0], // Plate
-  [-1.5, 0, 0], // Screw
-  [-1.5, 0, 0], // TopCase
-  [-1.5, 0, 0], // Stabilizers
-];
+const FINAL_POSITIONS = {
+  base: [
+    [-1.5, 0, 0],
+    [-1.5, 0, 0],
+    [-1.5, 0, 0],
+    [-1.5, 0, 0],
+    [-1.5, 0, 0],
+    [-1.5, 0, 0],
+  ],
+  switch: [-1.5, 0, 0],
+  keycap: [-1.5, 0, 0],
+};
 
-const KeyboardPart = ({ modelPath, index, animationProgress, scale }) => {
+const KeyboardPart = ({ modelPath, index, animationProgress, scale, partType, visible = true }) => {
   const { scene } = useGLTF(modelPath);
   const modelRef = useRef();
 
   useEffect(() => {
-    
     scene.traverse((child) => {
       if (child.isMesh) {
         child.castShadow = true;
@@ -56,36 +60,53 @@ const KeyboardPart = ({ modelPath, index, animationProgress, scale }) => {
 
   useFrame(() => {
     if (modelRef.current) {
-      const initialPos = INITIAL_POSITIONS[index];
-      const finalPos = FINAL_POSITIONS[index];
+      if (partType === "base") {
+        const initialPos = INITIAL_POSITIONS.base[index];
+        const finalPos = FINAL_POSITIONS.base[index];
 
-      modelRef.current.position.x = THREE.MathUtils.lerp(
-        initialPos[0],
-        finalPos[0],
-        animationProgress
-      );
-      modelRef.current.position.y = THREE.MathUtils.lerp(
-        initialPos[1],
-        finalPos[1],
-        animationProgress
-      );
-      modelRef.current.position.z = THREE.MathUtils.lerp(
-        initialPos[2],
-        finalPos[2],
-        animationProgress
-      );
+        modelRef.current.position.x = THREE.MathUtils.lerp(
+          initialPos[0],
+          finalPos[0],
+          animationProgress
+        );
+        modelRef.current.position.y = THREE.MathUtils.lerp(
+          initialPos[1],
+          finalPos[1],
+          animationProgress
+        );
+        modelRef.current.position.z = THREE.MathUtils.lerp(
+          initialPos[2],
+          finalPos[2],
+          animationProgress
+        );
+      } else {
+        const initialPos = INITIAL_POSITIONS[partType];
+        const finalPos = FINAL_POSITIONS[partType];
+
+        modelRef.current.position.x = initialPos[0];
+        modelRef.current.position.y = THREE.MathUtils.lerp(
+          initialPos[1],
+          finalPos[1],
+          animationProgress
+        );
+        modelRef.current.position.z = initialPos[2];
+      }
     }
   });
 
-  return <primitive ref={modelRef} object={scene} scale={scale} />;
+  return visible ? <primitive ref={modelRef} object={scene} scale={scale} /> : null;
 };
 
-const Model = ({ size }) => {
-  const [animationProgress, setAnimationProgress] = useState(0);
+const Model = ({ size, selectedModel }) => {
+  const [baseAnimationProgress, setBaseAnimationProgress] = useState(0);
+  const [switchAnimationProgress, setSwitchAnimationProgress] = useState(0);
+  const [keycapAnimationProgress, setKeycapAnimationProgress] = useState(0);
+  const [showSwitch, setShowSwitch] = useState(false);
+  const [showKeycap, setShowKeycap] = useState(false);
   const groupRef = useRef();
   const scale = MODEL_SCALES[size] || 25;
 
-  const MODEL_PATHS = [
+  const BASE_MODEL_PATHS = [
     `/keyboard/${size}keyboard/1.BottomCase.glb`,
     `/keyboard/${size}keyboard/2.PCB.glb`,
     `/keyboard/${size}keyboard/3.Plate.glb`,
@@ -94,8 +115,11 @@ const Model = ({ size }) => {
     `/keyboard/${size}keyboard/6.Stabilizers.glb`,
   ];
 
+  const SWITCH_MODEL_PATH = `/keyboard/${size}keyboard/${size}Switchs.glb`;
+  const KEYCAP_MODEL_PATH = `/keyboard/${size}keyboard/${size}Keycaps.glb`;
+
   useEffect(() => {
-    const animateParts = () => {
+    const animateBaseParts = () => {
       const duration = 2000;
       const startTime = Date.now();
 
@@ -103,7 +127,7 @@ const Model = ({ size }) => {
         const elapsed = Date.now() - startTime;
         const progress = Math.min(elapsed / duration, 1);
 
-        setAnimationProgress(progress);
+        setBaseAnimationProgress(progress);
 
         if (progress < 1) {
           requestAnimationFrame(updateAnimation);
@@ -113,28 +137,100 @@ const Model = ({ size }) => {
       requestAnimationFrame(updateAnimation);
     };
 
-    const timer = setTimeout(animateParts, 500);
+    const timer = setTimeout(animateBaseParts, 500);
     return () => clearTimeout(timer);
   }, [size]);
 
+  useEffect(() => {
+    if (selectedModel === "switch") {
+      setShowSwitch(true);
+      setShowKeycap(false);
+      setSwitchAnimationProgress(0);
+      
+      setTimeout(() => {
+        const duration = 1500;
+        const startTime = Date.now();
+
+        const updateAnimation = () => {
+          const elapsed = Date.now() - startTime;
+          const progress = Math.min(elapsed / duration, 1);
+
+          setSwitchAnimationProgress(progress);
+
+          if (progress < 1) {
+            requestAnimationFrame(updateAnimation);
+          }
+        };
+
+        requestAnimationFrame(updateAnimation);
+      }, 100);
+    } else if (selectedModel === "keycap") {
+      setShowKeycap(true);
+      setShowSwitch(false);
+      setKeycapAnimationProgress(0);
+      
+      setTimeout(() => {
+        const duration = 1500;
+        const startTime = Date.now();
+
+        const updateAnimation = () => {
+          const elapsed = Date.now() - startTime;
+          const progress = Math.min(elapsed / duration, 1);
+
+          setKeycapAnimationProgress(progress);
+
+          if (progress < 1) {
+            requestAnimationFrame(updateAnimation);
+          }
+        };
+
+        requestAnimationFrame(updateAnimation);
+      }, 100);
+    } else if (selectedModel === null || selectedModel === undefined) {
+      setShowSwitch(false);
+      setShowKeycap(false);
+    }
+  }, [selectedModel]);
+
   return (
     <group ref={groupRef}>
-      {MODEL_PATHS.map((path, index) => (
+      {BASE_MODEL_PATHS.map((path, index) => (
         <KeyboardPart
-          key={index}
+          key={`base-${index}`}
           modelPath={path}
           index={index}
-          animationProgress={animationProgress}
+          animationProgress={baseAnimationProgress}
           scale={scale}
+          partType="base"
         />
       ))}
+
+      {showSwitch && (
+        <KeyboardPart
+          key="switches"
+          modelPath={SWITCH_MODEL_PATH}
+          animationProgress={switchAnimationProgress}
+          scale={scale}
+          partType="switch"
+        />
+      )}
+
+      {showKeycap && (
+        <KeyboardPart
+          key="keycaps"
+          modelPath={KEYCAP_MODEL_PATH}
+          animationProgress={keycapAnimationProgress}
+          scale={scale}
+          partType="keycap"
+        />
+      )}
     </group>
   );
 };
 
-export const ThreeDModel = () => {
-  const { size } = useParams();
-  const keyboardSize = size || "100";
+export const ThreeDModel = ({ size, selectedModel }) => {
+  const { size: urlSize } = useParams();
+  const keyboardSize = size || urlSize || "100";
   
   const validSize = ["60", "80", "100"].includes(keyboardSize) ? keyboardSize : "100";
 
@@ -167,11 +263,11 @@ export const ThreeDModel = () => {
           enableZoom={true}
           minDistance={6}
           maxDistance={20}
-          zoomSpeed={0.5}
+          zoomSpeed={0.3}
           maxPolarAngle={Math.PI / 2}
           rotateSpeed={0.5}
         />
-        <Model size={validSize} />
+        <Model size={validSize} selectedModel={selectedModel} />
       </Canvas>
     </Container>
   );
