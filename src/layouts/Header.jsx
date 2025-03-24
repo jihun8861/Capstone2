@@ -101,10 +101,12 @@ export const Header = () => {
   const [isLogIn, setIsLogIn] = useState(!!localStorage.getItem("token"));
   const [showModal, setShowModal] = useState(false);
 
-  const fixedPages = ["/signin", "/custompage", "/signup", "/mypage"];
+  const fixedPages = ["/signin", "/signup", "/mypage"];
 
   const isFixedPage = (pathname) => {
-    return fixedPages.includes(pathname);
+    return (
+      fixedPages.includes(pathname) || pathname.startsWith("/custompage")
+    ); // custompage의 하위 경로 포함
   };
 
   useEffect(() => {
@@ -184,3 +186,4 @@ export const Header = () => {
     </Container>
   );
 };
+

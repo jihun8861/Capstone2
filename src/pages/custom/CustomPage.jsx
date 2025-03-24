@@ -1,6 +1,7 @@
 import styled from "styled-components";
+import { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
 import colors from "../../color/colors";
-import { useLocation } from "react-router-dom";
 import { ColorSelect } from "../../color/ColorSelect";
 import { ThreeDModel } from "../../components/model/ThreeDModel";
 
@@ -36,15 +37,15 @@ const LeftSection = styled.div`
 `;
 
 const CustomImage = styled.img`
-  width: 125px;
+  width: 130px;
   height: 32px;
-  padding-right: 5px;
+  padding-right: 10px;
   border-right: solid 1px #e1e1e1;
 `;
 
 const Title = styled.p`
   font-size: 19px;
-  padding-left: 5px;
+  margin-left: 10px;
   color: #333;
   font-weight: bold;
 `;
@@ -97,11 +98,55 @@ const SelectFrame = styled.div`
   justify-content: center;
   align-items: center;
   border: none;
+  z-index: 10;
+`;
+
+const SelectOption = styled.p`
+  font-size: 24px;
+  font-weight: bold;
+  color: ${props => props.selected ? "#007bff" : "#333"};
+  cursor: pointer;
+  margin: 15px 0;
+  padding: 10px 20px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  width: 80%;
+  text-align: center;
+
+  &:hover {
+    background-color: #f0f0f0;
+  }
 `;
 
 export const CustomPage = () => {
-  const location = useLocation();
-  const selectedSize = location.state?.selectedSize || "Custom Keyboard";
+  const { size } = useParams();
+  const selectedSize = size ? `${size}%` : "Custom Keyboard";
+  
+  const [selectedModel, setSelectedModel] = useState(null);
+  const [prevSelectedModel, setPrevSelectedModel] = useState(null);
+
+  // 모델 선택 핸들러 - 같은 모델을 다시 클릭했을 때 처리
+  const handleModelSelect = (modelType) => {
+    // 이전 선택 상태 저장
+    setPrevSelectedModel(selectedModel);
+    
+    // 같은 모델을 다시 클릭한 경우, 애니메이션을 다시 시작하기 위해 null로 설정 후 다시 설정
+    if (selectedModel === modelType) {
+      setSelectedModel(null);
+      setTimeout(() => {
+        setSelectedModel(modelType);
+      }, 10);
+    } else {
+      setSelectedModel(modelType);
+    }
+  };
+
+  // ThreeDModel 컴포넌트에 전달할 속성 확인
+  useEffect(() => {
+    if (selectedModel) {
+      console.log(`선택된 모델: ${selectedModel}, 사이즈: ${size}`);
+    }
+  }, [selectedModel, size]);
 
   return (
     <Container>
@@ -120,11 +165,21 @@ export const CustomPage = () => {
 
       <CustomFrame>
         <SelectFrame>
-          <p style={{ fontSize: "16px", fontWeight: "bold", color: "#333" }}>
-            키보드 설정 패널
-          </p>
+          <SelectOption 
+            selected={selectedModel === "switch"}
+            onClick={() => handleModelSelect("switch")}
+          >
+            스위치
+          </SelectOption>
+          <SelectOption 
+            selected={selectedModel === "keycap"}
+            onClick={() => handleModelSelect("keycap")}
+          >
+            키캡
+          </SelectOption>
         </SelectFrame>
-        <ThreeDModel />
+
+        <ThreeDModel size={size} selectedModel={selectedModel} prevSelectedModel={prevSelectedModel} />
       </CustomFrame>
 
       <ColorSelect />

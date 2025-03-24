@@ -12,11 +12,7 @@ export const RootRoutes = () => {
     <Routes>
       <Route path="/" element={<Layout mainContent={<MainPage />} />} />
       <Route path="/signin" element={<Layout mainContent={<SignInPage />} />} />
-      <Route
-        path="/custompage"
-        element={<Layout mainContent={<CustomPage />} />}
-      />
-      <Route path="/signin" element={<Layout mainContent={<SignInPage />} />} />
+      <Route path="/custompage/:size" element={<Layout mainContent={<CustomPage />} />} />
       <Route path="/signup" element={<Layout mainContent={<SignUpPage />} />} />
       <Route path="/kakaoRedirect" element={<KakaoRedirect />} />
       <Route path="/mypage" element={<Layout mainContent={<MyPage />} />} />
