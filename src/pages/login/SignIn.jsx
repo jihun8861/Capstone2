@@ -167,8 +167,8 @@ export const SignInPage = () => {
         console.log("status: ", error.response.data.status);
         console.log("headers: ", error.response.data.headers);
 
-        if (error.response.status === 500) {
-          alert("아이디 또는 비밀번호가 틀렸습니다."); // 500이 뜰 경우 로그인 실패로 처리
+        if (error.response.status === 400) {
+          alert("아이디 또는 비밀번호가 틀렸습니다.");
         } else {
           alert("로그인 중 문제가 발생했습니다. 다시 시도해주세요.");
         }

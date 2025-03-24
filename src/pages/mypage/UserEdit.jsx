@@ -47,7 +47,7 @@ const UserEdit = () => {
 
       if (response.data.success) {
         alert("회원 정보가 성공적으로 수정되었습니다.");
-        setUser({ name: formData.name, email: formData.email }); // 상태 업데이트
+        setUser({ name: formData.name, email: formData.email });
       } else {
         alert("회원 정보 수정에 실패했습니다.");
       }
