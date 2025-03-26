@@ -1,5 +1,9 @@
 {
   "projects": {
-    "default": "capstone2-70ef5"
-  }
+    "default": "cuskey-44d99",
+    "staging": "cuskey-44d99",
+    "stsaging": "cuskey-44d99"
+  },
+  "targets": {},
+  "etags": {}
 }
