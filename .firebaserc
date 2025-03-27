@@ -1,9 +1,0 @@
-{
-  "projects": {
-    "default": "cuskey-44d99",
-    "staging": "cuskey-44d99",
-    "stsaging": "cuskey-44d99"
-  },
-  "targets": {},
-  "etags": {}
-}
