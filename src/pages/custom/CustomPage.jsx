@@ -4,6 +4,8 @@ import { useParams } from "react-router-dom";
 import colors from "../../color/colors";
 import { ColorSelect } from "../../color/ColorSelect";
 import { ThreeDModel } from "../../components/model/ThreeDModel";
+import { useAuthStore } from "../../api/useAuthStore";
+import { saveItem } from "../../api/saveItem";
 
 const Container = styled.div`
   display: flex;
@@ -85,33 +87,26 @@ const CustomFrame = styled.div`
 const SelectFrame = styled.div`
   position: absolute;
   top: 50%;
-  left: 5%;
-  transform: translateY(-50%);
+  left: 30px;
+  transform: translateY(-80%);
   width: 280px;
-  height: 340px;
+  height: 380px;
   background: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
-  padding: 20px;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  border: none;
+  border: solid 1px #e6e5e1;
   z-index: 10;
 `;
 
 const SelectOption = styled.p`
   font-size: 24px;
   font-weight: bold;
-  color: ${props => props.selected ? "#007bff" : "#333"};
+  color: ${(props) => (props.selected ? "#007bff" : "#333")};
   cursor: pointer;
-  margin: 15px 0;
-  padding: 10px 20px;
+  padding: 10px;
   border-radius: 8px;
   transition: all 0.2s ease;
-  width: 80%;
-  text-align: center;
+  border: solid 1px;
 
   &:hover {
     background-color: #f0f0f0;
@@ -121,16 +116,14 @@ const SelectOption = styled.p`
 export const CustomPage = () => {
   const { size } = useParams();
   const selectedSize = size ? `${size}%` : "Custom Keyboard";
-  
+  const { user } = useAuthStore();
+
   const [selectedModel, setSelectedModel] = useState(null);
   const [prevSelectedModel, setPrevSelectedModel] = useState(null);
 
-  // 모델 선택 핸들러 - 같은 모델을 다시 클릭했을 때 처리
   const handleModelSelect = (modelType) => {
-    // 이전 선택 상태 저장
     setPrevSelectedModel(selectedModel);
-    
-    // 같은 모델을 다시 클릭한 경우, 애니메이션을 다시 시작하기 위해 null로 설정 후 다시 설정
+
     if (selectedModel === modelType) {
       setSelectedModel(null);
       setTimeout(() => {
@@ -141,12 +134,37 @@ export const CustomPage = () => {
     }
   };
 
-  // ThreeDModel 컴포넌트에 전달할 속성 확인
   useEffect(() => {
     if (selectedModel) {
       console.log(`선택된 모델: ${selectedModel}, 사이즈: ${size}`);
     }
   }, [selectedModel, size]);
+
+  const handleSave = async () => {
+    if (!user?.email) {
+      alert("로그인이 필요합니다.");
+      return;
+    }
+
+    const userData = {
+      email: user.email,
+      barebonecolor: "test",
+      keyboardtype: size,
+      keycapcolor: "test",
+      design: "test",
+      switchcolor: "test",
+    };
+
+    const result = await saveItem(userData);
+
+    if (result.success) {
+      console.log("저장 성공:", result.data);
+      alert("저장이 완료되었습니다.");
+    } else {
+      console.error("저장 실패:", result.error);
+      alert(`저장 중 오류가 발생했습니다: ${result.message}`);
+    }
+  };
 
   return (
     <Container>
@@ -159,19 +177,20 @@ export const CustomPage = () => {
         <RightSection>
           <Button>다시 시작하기</Button>
           <Button>공유하기</Button>
-          <Button>저장하기</Button>
+          <Button onClick={handleSave}>저장하기</Button>
         </RightSection>
       </HeaderFrame>
 
       <CustomFrame>
         <SelectFrame>
-          <SelectOption 
+          <SelectOption>베어본</SelectOption>
+          <SelectOption
             selected={selectedModel === "switch"}
             onClick={() => handleModelSelect("switch")}
           >
             스위치
           </SelectOption>
-          <SelectOption 
+          <SelectOption
             selected={selectedModel === "keycap"}
             onClick={() => handleModelSelect("keycap")}
           >
@@ -179,7 +198,11 @@ export const CustomPage = () => {
           </SelectOption>
         </SelectFrame>
 
-        <ThreeDModel size={size} selectedModel={selectedModel} prevSelectedModel={prevSelectedModel} />
+        <ThreeDModel
+          size={size}
+          selectedModel={selectedModel}
+          prevSelectedModel={prevSelectedModel}
+        />
       </CustomFrame>
 
       <ColorSelect />

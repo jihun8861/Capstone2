@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import styled from "styled-components";
-import { useAuthStore } from "../../api/useAuthStore ";
+import { useAuthStore } from "../../api/useAuthStore";
 import axios from "axios";
 
 const UserEdit = () => {

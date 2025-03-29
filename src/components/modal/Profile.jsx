@@ -3,7 +3,7 @@ import styled from "styled-components";
 import { BsPerson, BsHeart } from "react-icons/bs";
 import { FiPower } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
-import { useAuthStore } from "../../api/useAuthStore ";
+import { useAuthStore } from "../../api/useAuthStore";
 
 const Modal = styled.div`
   position: absolute;

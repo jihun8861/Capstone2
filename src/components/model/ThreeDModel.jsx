@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from "react";
 import styled from "styled-components";
+import { KEYBOARD_POSITIONS } from "../../data/keyboardPositions";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { useParams } from "react-router-dom";
 import { OrbitControls, useGLTF } from "@react-three/drei";
@@ -13,39 +14,7 @@ const Container = styled.div`
   align-items: center;
 `;
 
-const MODEL_SCALES = {
-  "60": 28,
-  "80": 26,
-  "100": 25,
-};
-
-const INITIAL_POSITIONS = {
-  base: [
-    [-1.5, 0, 0],
-    [-1.5, 1, 0],
-    [-1.5, 2, 0],
-    [-1.5, 3, 0],
-    [-1.5, 4, 0],
-    [-1.5, 5, 0],
-  ],
-  switch: [-1.5, 5, 0],
-  keycap: [-1.5, 5, 0],
-};
-
-const FINAL_POSITIONS = {
-  base: [
-    [-1.5, 0, 0],
-    [-1.5, 0, 0],
-    [-1.5, 0, 0],
-    [-1.5, 0, 0],
-    [-1.5, 0, 0],
-    [-1.5, 0, 0],
-  ],
-  switch: [-1.5, 0, 0],
-  keycap: [-1.5, 0, 0],
-};
-
-const KeyboardPart = ({ modelPath, index, animationProgress, scale, partType, visible = true }) => {
+const KeyboardPart = ({ modelPath, index, animationProgress, scale, partType, size, visible = true }) => {
   const { scene } = useGLTF(modelPath);
   const modelRef = useRef();
 
@@ -61,8 +30,8 @@ const KeyboardPart = ({ modelPath, index, animationProgress, scale, partType, vi
   useFrame(() => {
     if (modelRef.current) {
       if (partType === "base") {
-        const initialPos = INITIAL_POSITIONS.base[index];
-        const finalPos = FINAL_POSITIONS.base[index];
+        const initialPos = KEYBOARD_POSITIONS.getInitialPosition(size, partType, index);
+        const finalPos = KEYBOARD_POSITIONS.getFinalPosition(size, partType, index);
 
         modelRef.current.position.x = THREE.MathUtils.lerp(
           initialPos[0],
@@ -80,8 +49,8 @@ const KeyboardPart = ({ modelPath, index, animationProgress, scale, partType, vi
           animationProgress
         );
       } else {
-        const initialPos = INITIAL_POSITIONS[partType];
-        const finalPos = FINAL_POSITIONS[partType];
+        const initialPos = KEYBOARD_POSITIONS.getInitialPosition(size, partType);
+        const finalPos = KEYBOARD_POSITIONS.getFinalPosition(size, partType);
 
         modelRef.current.position.x = initialPos[0];
         modelRef.current.position.y = THREE.MathUtils.lerp(
@@ -104,7 +73,7 @@ const Model = ({ size, selectedModel }) => {
   const [showSwitch, setShowSwitch] = useState(false);
   const [showKeycap, setShowKeycap] = useState(false);
   const groupRef = useRef();
-  const scale = MODEL_SCALES[size] || 25;
+  const scale = KEYBOARD_POSITIONS.getScale(size);
 
   const BASE_MODEL_PATHS = [
     `/keyboard/${size}keyboard/1.BottomCase.glb`,
@@ -142,56 +111,51 @@ const Model = ({ size, selectedModel }) => {
   }, [size]);
 
   useEffect(() => {
-    if (selectedModel === "switch") {
+    if (selectedModel === "switch" && !showSwitch) {
       setShowSwitch(true);
-      setShowKeycap(false);
       setSwitchAnimationProgress(0);
-      
+  
       setTimeout(() => {
         const duration = 1500;
         const startTime = Date.now();
-
+  
         const updateAnimation = () => {
           const elapsed = Date.now() - startTime;
           const progress = Math.min(elapsed / duration, 1);
-
+  
           setSwitchAnimationProgress(progress);
-
+  
           if (progress < 1) {
             requestAnimationFrame(updateAnimation);
           }
         };
-
+  
         requestAnimationFrame(updateAnimation);
       }, 100);
-    } else if (selectedModel === "keycap") {
+    } else if (selectedModel === "keycap" && !showKeycap) {
       setShowKeycap(true);
-      setShowSwitch(false);
       setKeycapAnimationProgress(0);
-      
+  
       setTimeout(() => {
         const duration = 1500;
         const startTime = Date.now();
-
+  
         const updateAnimation = () => {
           const elapsed = Date.now() - startTime;
           const progress = Math.min(elapsed / duration, 1);
-
+  
           setKeycapAnimationProgress(progress);
-
+  
           if (progress < 1) {
             requestAnimationFrame(updateAnimation);
           }
         };
-
+  
         requestAnimationFrame(updateAnimation);
       }, 100);
-    } else if (selectedModel === null || selectedModel === undefined) {
-      setShowSwitch(false);
-      setShowKeycap(false);
     }
   }, [selectedModel]);
-
+  
   return (
     <group ref={groupRef}>
       {BASE_MODEL_PATHS.map((path, index) => (
@@ -202,6 +166,7 @@ const Model = ({ size, selectedModel }) => {
           animationProgress={baseAnimationProgress}
           scale={scale}
           partType="base"
+          size={size}
         />
       ))}
 
@@ -212,6 +177,7 @@ const Model = ({ size, selectedModel }) => {
           animationProgress={switchAnimationProgress}
           scale={scale}
           partType="switch"
+          size={size}
         />
       )}
 
@@ -222,6 +188,7 @@ const Model = ({ size, selectedModel }) => {
           animationProgress={keycapAnimationProgress}
           scale={scale}
           partType="keycap"
+          size={size}
         />
       )}
     </group>
