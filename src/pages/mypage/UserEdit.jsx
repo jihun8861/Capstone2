@@ -3,6 +3,178 @@ import styled from "styled-components";
 import { useAuthStore } from "../../api/useAuthStore ";
 import axios from "axios";
 
+const Container = styled.div`
+  width: 100%;
+  max-width: 800px;
+  margin-top: -50px;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 20px;
+`;
+
+const PageHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+`;
+
+const Title = styled.h2`
+  font-size: 24px;
+  color: #333;
+  font-weight: 600;
+  margin: 0;
+`;
+
+const FormCard = styled.div`
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+`;
+
+const StyledContent = styled.div`
+  padding: 30px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: 30px;
+  }
+`;
+
+const SectionTitle = styled.h3`
+  font-size: 18px;
+  color: #333;
+  margin: 0 0 20px 0;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+`;
+
+const ProfileSection = styled.div``;
+
+const PasswordSection = styled.div``;
+
+const FormGroup = styled.div`
+  margin-bottom: 20px;
+`;
+
+const Label = styled.label`
+  display: block;
+  font-weight: 500;
+  margin-bottom: 8px;
+  color: #333;
+`;
+
+const Input = styled.input`
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: border 0.2s;
+  background-color: ${(props) =>
+    props.disabled || props.readOnly ? "#f5f5f5" : "white"};
+
+  &:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.15);
+  }
+`;
+
+const NicknameInputGroup = styled.div`
+  display: flex;
+  gap: 10px;
+`;
+
+const HelpText = styled.p`
+  font-size: 12px;
+  color: #777;
+  margin-top: 4px;
+  margin-left: 6px;
+`;
+
+const ButtonGroup = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 30px;
+  border-top: 1px solid #eee;
+  padding-top: 20px;
+  gap: 12px;
+`;
+
+const Button = styled.button`
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+`;
+
+const ChangeButton = styled(Button)`
+  background: #007bff;
+  color: white;
+  border: none;
+  white-space: nowrap;
+  padding: 0 20px;
+
+  &:hover {
+    background: #0069d9;
+  }
+
+  &:disabled {
+    background: #99c5ff;
+    cursor: not-allowed;
+  }
+`;
+
+const CancelButton = styled(Button)`
+  background: #f2f2f2;
+  color: #666;
+  border: none;
+
+  &:hover {
+    background: #e5e5e5;
+  }
+`;
+
+const SubmitButton = styled(Button)`
+  background: #007bff;
+  color: white;
+  border: none;
+
+  &:hover {
+    background: #0069d9;
+  }
+
+  &:disabled {
+    background: #99c5ff;
+    cursor: not-allowed;
+  }
+`;
+
+const SuccessMessage = styled.div`
+  background-color: #e6f7eb;
+  color: #2e7d32;
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  font-size: 14px;
+`;
+
+const ErrorMessage = styled.div`
+  background-color: #fdeeee;
+  color: #d32f2f;
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  font-size: 14px;
+`;
+
 const UserEdit = () => {
   const { user, setUser } = useAuthStore();
   const [loading, setLoading] = useState({
@@ -40,7 +212,6 @@ const UserEdit = () => {
     setSuccessMessage("");
   };
 
-  // 닉네임 변경
   const handleNicknameChange = async () => {
     if (!formData.nickname.trim()) {
       setErrorMessage("닉네임을 입력해주세요.");
@@ -71,7 +242,6 @@ const UserEdit = () => {
       setLoading({ ...loading, nickname: false });
     }
   };
-  // 비밀번호 변경
   const handlePasswordChange = async (e) => {
     e.preventDefault();
 
@@ -216,6 +386,9 @@ const UserEdit = () => {
                   onChange={handleChange}
                   placeholder="현재 비밀번호"
                 />
+                <HelpText>
+                  소셜로그인 사용자는 비밀번호를 변경하실 수 없습니다.
+                </HelpText>
               </FormGroup>
 
               <FormGroup>
@@ -260,174 +433,3 @@ const UserEdit = () => {
 };
 
 export default UserEdit;
-
-const Container = styled.div`
-  width: 100%;
-  max-width: 800px;
-  margin-top: -50px;
-  margin-left: auto;
-  margin-right: auto;
-  padding: 20px;
-`;
-
-const PageHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-`;
-
-const Title = styled.h2`
-  font-size: 24px;
-  color: #333;
-  font-weight: 600;
-  margin: 0;
-`;
-
-const FormCard = styled.div`
-  background: white;
-  border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
-  overflow: hidden;
-`;
-
-const StyledContent = styled.div`
-  padding: 30px;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 40px;
-
-  @media (max-width: 768px) {
-    grid-template-columns: 1fr;
-    gap: 30px;
-  }
-`;
-
-const SectionTitle = styled.h3`
-  font-size: 18px;
-  color: #333;
-  margin: 0 0 20px 0;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #eee;
-`;
-
-const ProfileSection = styled.div``;
-
-const PasswordSection = styled.div``;
-
-const FormGroup = styled.div`
-  margin-bottom: 20px;
-`;
-
-const Label = styled.label`
-  display: block;
-  font-weight: 500;
-  margin-bottom: 8px;
-  color: #333;
-`;
-
-const Input = styled.input`
-  width: 100%;
-  padding: 12px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 14px;
-  transition: border 0.2s;
-  background-color: ${(props) =>
-    props.disabled || props.readOnly ? "#f5f5f5" : "white"};
-
-  &:focus {
-    outline: none;
-    border-color: #007bff;
-    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.15);
-  }
-`;
-
-const NicknameInputGroup = styled.div`
-  display: flex;
-  gap: 10px;
-`;
-
-const HelpText = styled.p`
-  font-size: 12px;
-  color: #777;
-  margin-top: 4px;
-`;
-
-const ButtonGroup = styled.div`
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 30px;
-  border-top: 1px solid #eee;
-  padding-top: 20px;
-  gap: 12px;
-`;
-
-const Button = styled.button`
-  padding: 10px 20px;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-`;
-
-const ChangeButton = styled(Button)`
-  background: #007bff;
-  color: white;
-  border: none;
-  white-space: nowrap;
-  padding: 0 20px;
-
-  &:hover {
-    background: #0069d9;
-  }
-
-  &:disabled {
-    background: #99c5ff;
-    cursor: not-allowed;
-  }
-`;
-
-const CancelButton = styled(Button)`
-  background: #f2f2f2;
-  color: #666;
-  border: none;
-
-  &:hover {
-    background: #e5e5e5;
-  }
-`;
-
-const SubmitButton = styled(Button)`
-  background: #007bff;
-  color: white;
-  border: none;
-
-  &:hover {
-    background: #0069d9;
-  }
-
-  &:disabled {
-    background: #99c5ff;
-    cursor: not-allowed;
-  }
-`;
-
-const SuccessMessage = styled.div`
-  background-color: #e6f7eb;
-  color: #2e7d32;
-  padding: 12px 16px;
-  border-radius: 6px;
-  margin-bottom: 20px;
-  font-size: 14px;
-`;
-
-const ErrorMessage = styled.div`
-  background-color: #fdeeee;
-  color: #d32f2f;
-  padding: 12px 16px;
-  border-radius: 6px;
-  margin-bottom: 20px;
-  font-size: 14px;
-`;
