@@ -1,7 +1,7 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, forwardRef, useImperativeHandle } from "react";
 import styled from "styled-components";
 import { KEYBOARD_POSITIONS } from "../../data/keyboardPositions";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useParams } from "react-router-dom";
 import { OrbitControls, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
@@ -65,6 +65,36 @@ const KeyboardPart = ({ modelPath, index, animationProgress, scale, partType, si
 
   return visible ? <primitive ref={modelRef} object={scene} scale={scale} /> : null;
 };
+
+// 스크린샷 핸들러 컴포넌트 추가
+const ScreenshotHandler = forwardRef(({ children }, ref) => {
+  const { gl, scene, camera } = useThree();
+  
+  useImperativeHandle(ref, () => ({
+    takeScreenshot: () => {
+      // 현재 카메라의 위치와 회전 값을 저장
+      const originalPosition = camera.position.clone();
+      const originalRotation = camera.rotation.clone();
+
+      // 카메라를 기본 정면 위치로 설정
+      camera.position.set(0, 9, 12);
+      camera.lookAt(new THREE.Vector3(0, 0, 0));
+      gl.render(scene, camera);
+
+      // 캔버스에서 데이터 URL 추출
+      const dataURL = gl.domElement.toDataURL('image/png');
+
+      // 원래 카메라 위치 및 회전으로 복귀
+      camera.position.copy(originalPosition);
+      camera.rotation.copy(originalRotation);
+      gl.render(scene, camera);
+
+      return dataURL;
+    }
+  }));
+
+  return <>{children}</>;
+});
 
 const Model = ({ size, selectedModel }) => {
   const [baseAnimationProgress, setBaseAnimationProgress] = useState(0);
@@ -195,47 +225,59 @@ const Model = ({ size, selectedModel }) => {
   );
 };
 
-export const ThreeDModel = ({ size, selectedModel }) => {
+export const ThreeDModel = forwardRef(({ size, selectedModel }, ref) => {
   const { size: urlSize } = useParams();
   const keyboardSize = size || urlSize || "100";
-  
   const validSize = ["60", "80", "100"].includes(keyboardSize) ? keyboardSize : "100";
+  const screenshotRef = useRef();
+  
+  // 부모 컴포넌트에서 스크린샷을 가져올 수 있는 함수 노출
+  useImperativeHandle(ref, () => ({
+    getScreenshot: () => {
+      if (screenshotRef.current) {
+        return screenshotRef.current.takeScreenshot();
+      }
+      return null;
+    }
+  }));
 
   return (
     <Container>
       <Canvas
         shadows
         camera={{
-          position: [0, 5, 12],
-          fov: 40,
+          position: [0, 7, 12],
+          fov: 35,
         }}
       >
-        <ambientLight intensity={0.5} />
-        <directionalLight
-          position={[5, 10, 5]}
-          intensity={1.5}
-          castShadow
-          shadow-mapSize-width={2048}
-          shadow-mapSize-height={2048}
-          shadow-camera-near={0.5}
-          shadow-camera-far={50}
-          shadow-camera-left={-10}
-          shadow-camera-right={10}
-          shadow-camera-top={10}
-          shadow-camera-bottom={-10}
-        />
-        <pointLight position={[-5, 5, 5]} intensity={0.8} castShadow />
+        <ScreenshotHandler ref={screenshotRef}>
+          <ambientLight intensity={0.5} />
+          <directionalLight
+            position={[5, 10, 5]}
+            intensity={1.5}
+            castShadow
+            shadow-mapSize-width={2048}
+            shadow-mapSize-height={2048}
+            shadow-camera-near={0.5}
+            shadow-camera-far={50}
+            shadow-camera-left={-10}
+            shadow-camera-right={10}
+            shadow-camera-top={10}
+            shadow-camera-bottom={-10}
+          />
+          <pointLight position={[-5, 5, 5]} intensity={0.8} castShadow />
 
-        <OrbitControls
-          enableZoom={true}
-          minDistance={6}
-          maxDistance={20}
-          zoomSpeed={0.3}
-          maxPolarAngle={Math.PI / 2}
-          rotateSpeed={0.5}
-        />
-        <Model size={validSize} selectedModel={selectedModel} />
+          <OrbitControls
+            enableZoom={true}
+            minDistance={6}
+            maxDistance={20}
+            zoomSpeed={0.3}
+            maxPolarAngle={Math.PI / 2}
+            rotateSpeed={0.5}
+          />
+          <Model size={validSize} selectedModel={selectedModel} />
+        </ScreenshotHandler>
       </Canvas>
     </Container>
   );
-};
+});
