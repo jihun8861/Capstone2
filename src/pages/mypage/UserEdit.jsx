@@ -5,52 +5,81 @@ import axios from "axios";
 
 const Container = styled.div`
   width: 100%;
-  max-width: 800px;
-  margin-top: -50px;
-  margin-left: auto;
-  margin-right: auto;
-  padding: 20px;
+  max-width: 900px;
+  margin: 40px auto;
+  padding: 0 20px;
 `;
 
 const PageHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 30px;
+  position: relative;
+
+  &:after {
+    content: "";
+    position: absolute;
+    bottom: -10px;
+    left: 0;
+    width: 60px;
+    height: 3px;
+    background: #007bff;
+    border-radius: 2px;
+  }
 `;
 
 const Title = styled.h2`
-  font-size: 24px;
-  color: #333;
-  font-weight: 600;
+  font-size: 28px;
+  color: #2c3e50;
+  font-weight: 700;
   margin: 0;
 `;
 
 const FormCard = styled.div`
   background: white;
-  border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.07);
   overflow: hidden;
+  transition: all 0.3s ease;
+
+  &:hover {
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.1);
+    transform: translateY(-3px);
+  }
 `;
 
 const StyledContent = styled.div`
-  padding: 30px;
+  padding: 40px;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 40px;
+  gap: 60px;
 
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
-    gap: 30px;
+    gap: 40px;
+    padding: 30px;
   }
 `;
 
 const SectionTitle = styled.h3`
-  font-size: 18px;
-  color: #333;
-  margin: 0 0 20px 0;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #eee;
+  font-size: 20px;
+  color: #2c3e50;
+  margin: 0 0 25px 0;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #edf2f7;
+  position: relative;
+
+  &:after {
+    content: "";
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    width: 40px;
+    height: 3px;
+    background: #007bff;
+    border-radius: 2px;
+  }
 `;
 
 const ProfileSection = styled.div``;
@@ -58,61 +87,74 @@ const ProfileSection = styled.div``;
 const PasswordSection = styled.div``;
 
 const FormGroup = styled.div`
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 `;
 
 const Label = styled.label`
   display: block;
-  font-weight: 500;
-  margin-bottom: 8px;
-  color: #333;
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: #4a5568;
+  font-size: 15px;
 `;
 
 const Input = styled.input`
   width: 100%;
-  padding: 12px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 14px;
-  transition: border 0.2s;
+  padding: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 15px;
+  transition: all 0.3s;
   background-color: ${(props) =>
-    props.disabled || props.readOnly ? "#f5f5f5" : "white"};
+    props.disabled || props.readOnly ? "#f8fafc" : "white"};
 
   &:focus {
     outline: none;
     border-color: #007bff;
-    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.15);
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.15);
+  }
+
+  &:hover:not(:disabled):not([readonly]) {
+    border-color: #cbd5e0;
+  }
+
+  &::placeholder {
+    color: #a0aec0;
   }
 `;
 
 const NicknameInputGroup = styled.div`
   display: flex;
-  gap: 10px;
+  gap: 12px;
 `;
 
 const HelpText = styled.p`
-  font-size: 12px;
-  color: #777;
-  margin-top: 4px;
+  font-size: 13px;
+  color: #718096;
+  margin-top: 6px;
   margin-left: 6px;
+  font-style: italic;
 `;
 
 const ButtonGroup = styled.div`
   display: flex;
   justify-content: flex-end;
   margin-top: 30px;
-  border-top: 1px solid #eee;
-  padding-top: 20px;
-  gap: 12px;
+  border-top: 1px solid #edf2f7;
+  padding-top: 25px;
+  gap: 16px;
 `;
 
 const Button = styled.button`
-  padding: 10px 20px;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 500;
+  padding: 12px 24px;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 `;
 
 const ChangeButton = styled(Button)`
@@ -120,25 +162,39 @@ const ChangeButton = styled(Button)`
   color: white;
   border: none;
   white-space: nowrap;
-  padding: 0 20px;
+  padding: 0 24px;
+  min-width: 100px;
 
   &:hover {
     background: #0069d9;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.2);
+  }
+
+  &:active {
+    transform: translateY(0);
   }
 
   &:disabled {
-    background: #99c5ff;
+    background: #90cdf4;
     cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
   }
 `;
 
 const CancelButton = styled(Button)`
-  background: #f2f2f2;
-  color: #666;
-  border: none;
+  background: #f7fafc;
+  color: #4a5568;
+  border: 1px solid #e2e8f0;
 
   &:hover {
-    background: #e5e5e5;
+    background: #edf2f7;
+    transform: translateY(-2px);
+  }
+
+  &:active {
+    transform: translateY(0);
   }
 `;
 
@@ -146,33 +202,62 @@ const SubmitButton = styled(Button)`
   background: #007bff;
   color: white;
   border: none;
+  min-width: 160px;
 
   &:hover {
     background: #0069d9;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.2);
+  }
+
+  &:active {
+    transform: translateY(0);
   }
 
   &:disabled {
-    background: #99c5ff;
+    background: #90cdf4;
     cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
   }
 `;
 
-const SuccessMessage = styled.div`
-  background-color: #e6f7eb;
-  color: #2e7d32;
-  padding: 12px 16px;
-  border-radius: 6px;
-  margin-bottom: 20px;
-  font-size: 14px;
+const Message = styled.div`
+  padding: 16px;
+  border-radius: 10px;
+  margin-bottom: 24px;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+
+  &:before {
+    content: "";
+    margin-right: 12px;
+    width: 24px;
+    height: 24px;
+    background-size: contain;
+    background-repeat: no-repeat;
+  }
 `;
 
-const ErrorMessage = styled.div`
-  background-color: #fdeeee;
-  color: #d32f2f;
-  padding: 12px 16px;
-  border-radius: 6px;
-  margin-bottom: 20px;
-  font-size: 14px;
+const SuccessMessage = styled(Message)`
+  background-color: #e6fffa;
+  color: #2c7a7b;
+  border-left: 4px solid #38b2ac;
+
+  &:before {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2338b2ac'%3E%3Cpath d='M0 0h24v24H0z' fill='none'/%3E%3Cpath d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/%3E%3C/svg%3E");
+  }
+`;
+
+const ErrorMessage = styled(Message)`
+  background-color: #fff5f5;
+  color: #c53030;
+  border-left: 4px solid #e53e3e;
+
+  &:before {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23e53e3e'%3E%3Cpath d='M0 0h24v24H0z' fill='none'/%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z'/%3E%3C/svg%3E");
+  }
 `;
 
 const UserEdit = () => {
@@ -223,25 +308,37 @@ const UserEdit = () => {
     setSuccessMessage("");
 
     try {
-      // 닉네임 변경 API가 준비되면 여기에 실제 API 호출 코드를 추가
-      // 지금은 성공메시지만 띄움
+      const response = await axios.post(
+        "https://port-0-edcustom-lxx6l4ha4fc09fa0.sel5.cloudtype.app/updatenickname",
+        {
+          email: formData.email,
+          nickname: formData.nickname,
+        }
+      );
 
-      setUser({
-        ...user,
-        nickname: formData.nickname,
-      });
-
-      setSuccessMessage("닉네임이 성공적으로 변경되었습니다.");
+      if (response.data.status === "OK") {
+        setUser({
+          ...user,
+          nickname: formData.nickname,
+        });
+        setSuccessMessage("닉네임이 성공적으로 변경되었습니다.");
+      } else {
+        setErrorMessage(response.data.message || "닉네임 변경에 실패했습니다.");
+      }
     } catch (error) {
       console.error("닉네임 변경 오류:", error);
-      setErrorMessage(
-        error.response?.data?.message ||
+      if (error.response?.data?.message) {
+        setErrorMessage(error.response.data.message);
+      } else {
+        setErrorMessage(
           "닉네임 변경 중 오류가 발생했습니다. 다시 시도해주세요."
-      );
+        );
+      }
     } finally {
       setLoading({ ...loading, nickname: false });
     }
   };
+
   const handlePasswordChange = async (e) => {
     e.preventDefault();
 

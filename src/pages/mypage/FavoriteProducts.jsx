@@ -242,7 +242,7 @@ const ArrowIcon = ({ direction }) => (
 );
 
 const mockKeyboards = [
-  //{ id: 1, name: "김호연", date: "2025-03-28", image: null },
+  //{ id: 1, name: "닉네임", date: "2025-03-28", image: null },
 ];
 
 const FavoriteProducts = () => {

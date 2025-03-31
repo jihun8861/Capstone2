@@ -9,7 +9,7 @@ const Container = styled.div`
   padding: 20px;
   height: 80vh;
   overflow: hidden;
-  margin-top: -70px;
+  margin-top: -30px;
 `;
 
 const Title = styled.h2`
@@ -242,10 +242,11 @@ const ArrowIcon = ({ direction }) => (
 );
 
 const mockKeyboards = [
-  { id: 1, name: "김호연", date: "2025-03-28", image: null },
-  { id: 2, name: "현지훈", date: "2025-03-25", image: null },
-  { id: 3, name: "조우주", date: "2025-03-20", image: null },
-  { id: 4, name: "염정규", date: "2025-03-18", image: null },
+  { id: 1, name: "닉네임", date: "2025-03-01", image: null },
+  { id: 2, name: "김호연", date: "2025-03-28", image: null },
+  { id: 3, name: "현지훈", date: "2025-03-25", image: null },
+  { id: 4, name: "조우주", date: "2025-03-20", image: null },
+  { id: 5, name: "염정규", date: "2025-03-18", image: null },
 ];
 
 const MyCustomKeyboard = () => {
