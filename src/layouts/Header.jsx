@@ -79,7 +79,8 @@ const LoginFrame = styled.div`
   font-weight: bold;
 
   span {
-    background-color: ${(props) => (props.scrolled ? "black" : "white")};
+    background-color: ${(props) =>
+      props.scrolled ? "black" : "white"};
     height: 16px;
     width: 1px;
     margin: 5px 8px;
@@ -101,12 +102,10 @@ export const Header = () => {
   const [isLogIn, setIsLogIn] = useState(!!localStorage.getItem("token"));
   const [showModal, setShowModal] = useState(false);
 
-  const fixedPages = ["/signin", "/signup", "/mypage"];
+  const fixedPages = ["/signin", "/custompage"];
 
   const isFixedPage = (pathname) => {
-    return (
-      fixedPages.includes(pathname) || pathname.startsWith("/custompage")
-    ); // custompage의 하위 경로 포함
+    return fixedPages.includes(pathname);
   };
 
   useEffect(() => {
@@ -160,7 +159,7 @@ export const Header = () => {
       <MenuIconWrapper>
         <MenuIcon scrolled={scrolled} />
       </MenuIconWrapper>
-      <LogoWrapper onClick={() => navigate("/")}>
+      <LogoWrapper onClick={() => navigate("/")}> 
         <LogoImage src={scrolled ? "/images/logo2.png" : "/images/logo1.png"} />
       </LogoWrapper>
       <Nav>
@@ -170,9 +169,9 @@ export const Header = () => {
           <>
             <ProfileIcon scrolled={scrolled} onClick={toggleModal} />
             {showModal && (
-              <Profile
-                onClose={closeModal}
-                onLogout={handleLogout}
+              <Profile 
+                onClose={closeModal} 
+                onLogout={handleLogout} 
                 showModal={showModal}
               />
             )}
@@ -186,4 +185,3 @@ export const Header = () => {
     </Container>
   );
 };
-
