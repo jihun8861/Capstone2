@@ -1,29 +1,31 @@
-import React, { useState } from "react";
+import React from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import styled from "styled-components";
+import UserEdit from "../mypage/UserEdit";
+import MyCustomKeyboard from "../mypage/MyCustomKeyboard";
+import FavoriteProducts from "../mypage/FavoriteProducts";
 
 const Container = styled.div`
   display: flex;
   width: 100%;
-  min-height: 100vh;
+  height: 100vh;
   padding: 40px;
   box-sizing: border-box;
+  margin-top: 80px;
 `;
 
 const Sidebar = styled.div`
-  width: 250px;
+  width: 220px;
   border-right: 1px solid #ddd;
 `;
 
-const MenuItem = styled.div.attrs((props) => ({
-  "data-active": props.isActive ? "true" : "false",
-}))`
-  padding: 15px 20px;
+const MenuItem = styled.div`
+  padding: 30px 20px;
   cursor: pointer;
   font-size: 18px;
-  font-weight: ${(props) => (props.isActive ? "bold" : "normal")};
-  color: ${(props) => (props.isActive ? "#000" : "#666")};
-  background: ${(props) => (props.isActive ? "#f0f0f0" : "transparent")};
-
+  font-weight: ${(props) => (props.$isActive ? "bold" : "normal")};
+  color: ${(props) => (props.$isActive ? "#000" : "#666")};
+  background: ${(props) => (props.$isActive ? "#f0f0f0" : "transparent")};
   &:hover {
     background: #f5f5f5;
   }
@@ -31,20 +33,28 @@ const MenuItem = styled.div.attrs((props) => ({
 
 const Content = styled.div`
   flex: 1;
-  padding: 20px;
+  padding: 80px;
 `;
 
 export const MyPage = () => {
-  const [selectedMenu, setSelectedMenu] = useState("회원정보 수정");
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const queryParams = new URLSearchParams(location.search);
+  const selectedMenu = queryParams.get("menu") || "회원정보 수정";
+
+  const handleMenuClick = (menu) => {
+    navigate(`/mypage?menu=${encodeURIComponent(menu)}`);
+  };
 
   const renderContent = () => {
     switch (selectedMenu) {
       case "회원정보 수정":
-        return <div>회원정보 수정 화면</div>;
+        return <UserEdit />;
       case "나의 커스텀 키보드":
-        return <div>커스텀 키보드 화면</div>;
+        return <MyCustomKeyboard />;
       case "관심상품":
-        return <div>관심상품 화면</div>;
+        return <FavoriteProducts />;
       default:
         return null;
     }
@@ -56,8 +66,8 @@ export const MyPage = () => {
         {["회원정보 수정", "나의 커스텀 키보드", "관심상품"].map((menu) => (
           <MenuItem
             key={menu}
-            isActive={selectedMenu === menu}
-            onClick={() => setSelectedMenu(menu)}
+            $isActive={selectedMenu === menu}
+            onClick={() => handleMenuClick(menu)}
           >
             {menu}
           </MenuItem>

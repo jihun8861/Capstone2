@@ -3,120 +3,193 @@ import { useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import axios from "axios";
 
-
 const Container = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
   width: 100%;
-  height: 100vh;
-  background-color: #f8f9fa;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e4e9f2 100%);
+  padding: 20px;
 `;
 
-const FormWrapper = styled.div`
+const FormCard = styled.div`
   background: white;
-  padding: 30px;
-  border-radius: 12px;
-  box-shadow: 0px 6px 12px rgba(0, 0, 0, 0.1);
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(109, 140, 255, 0.15);
+  padding: 40px;
+  width: 100%;
+  max-width: 500px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 450px;
-  margin-top: -300px;
 `;
 
 const Title = styled.h2`
-  margin-bottom: 90px;
-  font-size: 50px;
-  font-weight: bold;
-  color: #222;
+  text-align: center;
+  margin-bottom: 40px;
+  font-size: 36px;
+  font-weight: 700;
+  color: #333;
+  position: relative;
+
+  &:after {
+    content: "";
+    position: absolute;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 4px;
+    background: #6d8cff;
+    border-radius: 2px;
+  }
 `;
 
-const InputText = styled.div`
-  font-size: 15px;
-  font-weight: bold;
-  text-align: left;
+const Form = styled.form`
   width: 100%;
-  margin-top: 10px;
-  margin-bottom: -5px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+`;
+
+const InputBox = styled.div`
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+`;
+
+const InputLabel = styled.label`
+  font-size: 15px;
+  font-weight: 600;
+  color: #444;
+  margin-bottom: 8px;
 `;
 
 const Input = styled.input`
-  width: 100%;
-  padding: 16px;
-  margin: 15px 0;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  font-size: 17px;
+  height: 50px;
+  padding: 12px 16px;
+  font-size: 16px;
+  border: 1px solid #dce1e8;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  background-color: #f8fafc;
+
+  &:focus {
+    outline: none;
+    border-color: #6d8cff;
+    box-shadow: 0 0 0 3px rgba(109, 140, 255, 0.2);
+    background-color: white;
+  }
 `;
 
-const Button = styled.button`
+const LoginButton = styled.button`
   width: 100%;
-  padding: 16px;
-  margin-top: 20px;
-  background-color: #004aad;
+  height: 55px;
+  background: #6d8cff;
   color: white;
   font-size: 18px;
+  font-weight: 600;
   border: none;
-  border-radius: 6px;
+  border-radius: 10px;
   cursor: pointer;
-  font-weight: bold;
-  transition: background 0.3s ease;
+  margin-top: 10px;
+  transition: all 0.3s ease;
 
   &:hover {
-    background-color: #003580;
+    background: #5a75e6;
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(109, 140, 255, 0.3);
+  }
+
+  &:active {
+    transform: translateY(-1px);
+  }
+`;
+
+const Divider = styled.div`
+  display: flex;
+  align-items: center;
+  margin: 20px 0;
+  color: #999;
+  font-size: 14px;
+
+  &:before,
+  &:after {
+    content: "";
+    flex-grow: 1;
+    background: #eee;
+    height: 1px;
+    margin: 0 10px;
   }
 `;
 
 const SocialLoginWrapper = styled.div`
   display: flex;
-  justify-content: center;
+  flex-direction: column;
   width: 100%;
-  margin-top: 25px;
+  gap: 12px;
 `;
 
-const SocialLoginButton = styled.button`
-  width: 100%;
-  padding: 14px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 16px;
+const KakaoButton = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: bold;
   gap: 10px;
-  transition: background 0.3s ease;
+  width: 100%;
+  height: 50px;
+  background-color: #fee500;
+  color: #3a1d1d;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0 20px;
 
-  &.kakao {
-    background-color: #fee500;
-    color: #3c1e1e;
-  }
-  &.kakao:hover {
-    background-color: #f7d700;
+  &:hover {
+    background-color: #f6d800;
+    transform: translateY(-2px);
   }
 
-  &.naver {
-    background-color: #03c75a;
-    color: white;
+  &:active {
+    transform: translateY(0);
   }
-  &.naver:hover {
-    background-color: #029b47;
+
+  &:before {
+    content: "";
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 22' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M12 0C5.37 0 0 4.34 0 9.69C0 13.13 2.19 16.21 5.5 17.86C5.3 18.39 4.66 20.46 4.5 20.97C4.33 21.53 4.73 21.53 4.96 21.38C5.15 21.25 7.85 19.5 9.06 18.7C10.02 18.86 11 18.94 12 18.94C18.63 18.94 24 14.6 24 9.25C24 4.15 18.88 0 12 0Z' fill='%233A1D1D'/%3E%3C/svg%3E");
+    background-size: contain;
+    background-repeat: no-repeat;
   }
 `;
 
+const HelpText = styled.p`
+  font-size: 12px;
+  color: #777;
+  margin-top: 4px;
+`;
+
 const SignUpLink = styled.div`
-  margin-top: 15px;
+  margin-top: 25px;
   font-size: 15px;
-  color: #555;
+  color: #666;
   text-align: center;
 
   a {
-    font-weight: bold;
-    color: #004aad;
+    font-weight: 600;
+    color: #6d8cff;
     text-decoration: none;
+    margin-left: 5px;
+
+    &:hover {
+      text-decoration: underline;
+    }
   }
 `;
 
@@ -125,6 +198,7 @@ export const SignInPage = () => {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const REST_API_KEY = `9b8440c52cc5a7dd32647c76aade83d3`;
   const REDIRECT_URI = `http://localhost:5173/KakaoRedirect`;
@@ -143,6 +217,8 @@ export const SignInPage = () => {
       return;
     }
 
+    setIsLoading(true);
+
     try {
       const response = await axios.post(
         "https://port-0-edcustom-lxx6l4ha4fc09fa0.sel5.cloudtype.app/login",
@@ -156,21 +232,20 @@ export const SignInPage = () => {
         }
       );
 
-      if (response.status === 200 && response.data.token) {
-        localStorage.setItem("token", response.data.token);
+      if (response.data.status === "OK" && response.data.data.token) {
+        localStorage.setItem("token", response.data.data.token);
         window.location.href = "/";
-        console.log("token: ", response.data.token);
       } else {
         alert("로그인 실패: 서버 응답이 올바르지 않습니다.");
       }
     } catch (error) {
       if (error.response) {
-        console.log("data: ", error.response.data);
-        console.log("status: ", error.response.status);
-        console.log("headers: ", error.response.headers);
+        console.log("data: ", error.response.data.data);
+        console.log("status: ", error.response.data.status);
+        console.log("headers: ", error.response.data.headers);
 
-        if (error.response.status === 500) {
-          alert("아이디 또는 비밀번호가 틀렸습니다."); // 500이 뜰 경우 로그인 실패로 처리
+        if (error.response.status === 400) {
+          alert("아이디 또는 비밀번호가 틀렸습니다.");
         } else {
           alert("로그인 중 문제가 발생했습니다. 다시 시도해주세요.");
         }
@@ -181,41 +256,56 @@ export const SignInPage = () => {
         console.log("Error", error.message);
         alert("예기치 못한 오류가 발생했습니다.");
       }
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
     <Container>
-      <FormWrapper>
+      <FormCard>
         <Title>로그인</Title>
-        <InputText>ID</InputText>
-        <Input
-          type="text"
-          placeholder="아이디"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        <InputText>PASSWORD</InputText>
-        <Input
-          type="password"
-          placeholder="비밀번호"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-        <Button type="submit" onClick={handleLogin}>
-          로그인
-        </Button>
+        <Form onSubmit={handleLogin}>
+          <InputBox>
+            <InputLabel>아이디</InputLabel>
+            <Input
+              type="text"
+              placeholder="이메일을 입력하세요"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </InputBox>
+
+          <InputBox>
+            <InputLabel>비밀번호</InputLabel>
+            <Input
+              type="password"
+              placeholder="비밀번호를 입력하세요"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </InputBox>
+
+          <LoginButton type="submit" disabled={isLoading}>
+            {isLoading ? "로그인 중..." : "로그인"}
+          </LoginButton>
+        </Form>
+
+        <Divider>또는</Divider>
 
         <SocialLoginWrapper>
-          <SocialLoginButton onClick={handleKakaoLogin} className="kakao">
-            카카오 로그인
-          </SocialLoginButton>
+          <KakaoButton type="button" onClick={handleKakaoLogin}>
+            카카오로 로그인
+          </KakaoButton>
         </SocialLoginWrapper>
+        <HelpText>
+          카카오 계정으로 로그인하신 후, 마이페이지에서 닉네임을 설정해주세요.
+        </HelpText>
 
         <SignUpLink>
-          아직 회원이 아니신가요? <a href="/signup">회원가입</a>
+          아직 회원이 아니신가요?<a href="/signup">회원가입</a>
         </SignUpLink>
-      </FormWrapper>
+      </FormCard>
     </Container>
   );
 };
