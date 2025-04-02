@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { RxHamburgerMenu } from "react-icons/rx";
 import { FaUserCircle } from "react-icons/fa";
 import { Profile } from "../components/modal/Profile";
-import { useAuthStore } from "../api/useAuthStore ";
+import { useAuthStore } from "../api/useAuthStore";
 
 const Container = styled.div`
   display: flex;
@@ -79,8 +79,7 @@ const LoginFrame = styled.div`
   font-weight: bold;
 
   span {
-    background-color: ${(props) =>
-      props.scrolled ? "black" : "white"};
+    background-color: ${(props) => (props.scrolled ? "black" : "white")};
     height: 16px;
     width: 1px;
     margin: 5px 8px;
@@ -159,7 +158,7 @@ export const Header = () => {
       <MenuIconWrapper>
         <MenuIcon scrolled={scrolled} />
       </MenuIconWrapper>
-      <LogoWrapper onClick={() => navigate("/")}> 
+      <LogoWrapper onClick={() => navigate("/")}>
         <LogoImage src={scrolled ? "/images/logo2.png" : "/images/logo1.png"} />
       </LogoWrapper>
       <Nav>
@@ -169,9 +168,9 @@ export const Header = () => {
           <>
             <ProfileIcon scrolled={scrolled} onClick={toggleModal} />
             {showModal && (
-              <Profile 
-                onClose={closeModal} 
-                onLogout={handleLogout} 
+              <Profile
+                onClose={closeModal}
+                onLogout={handleLogout}
                 showModal={showModal}
               />
             )}

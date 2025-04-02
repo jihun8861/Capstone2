@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { useAuthStore } from "../../api/useAuthStore ";
+import { useAuthStore } from "../../api/useAuthStore";
 
 export const KakaoRedirect = () => {
   const navigate = useNavigate();
@@ -30,12 +30,15 @@ export const KakaoRedirect = () => {
         }
       )
       .then(async (response) => {
-        console.log("✅ 로그인 성공 응답:", JSON.stringify(response.data, null, 2));
-        
+        console.log(
+          "✅ 로그인 성공 응답:",
+          JSON.stringify(response.data, null, 2)
+        );
+
         let token;
-        
+
         // 새로운 응답 형식: data 필드 자체가 토큰인 경우
-        if (response.data.data && typeof response.data.data === 'string') {
+        if (response.data.data && typeof response.data.data === "string") {
           token = response.data.data;
           console.log("✅ data 필드에서 토큰 추출 (문자열):", token);
         }
@@ -48,13 +51,12 @@ export const KakaoRedirect = () => {
         else if (response.data.token) {
           token = response.data.token;
           console.log("✅ token 필드에서 토큰 추출:", token);
-        }
-        else {
+        } else {
           console.error("❌ 토큰을 찾을 수 없음");
           navigate("/signin");
           return;
         }
-        
+
         // 토큰 저장
         localStorage.setItem("token", token);
         console.log("✅ 토큰 저장 완료");
