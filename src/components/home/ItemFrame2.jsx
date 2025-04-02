@@ -1,79 +1,159 @@
+import React from "react";
 import styled from "styled-components";
+import { motion } from "framer-motion";
 
-const Container = styled.div`
+const Container = styled(motion.div)`
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 150px 0;
+`;
+
+const Frame = styled.div`
+  width: 85%;
+  height: 100%;
+`;
+
+const TitleFrame = styled(motion.div)`
+  width: 30%;
+  height: 200px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: left;
-  padding: 100px 20px;
-  max-width: 1000px;
-  margin: 0 auto;
 `;
 
-const Title = styled.h1`
-  font-size: 40px;
-  font-weight: 700;
-  color: #222;
-  margin-bottom: 16px;
-  opacity: 0;
-  transform: translateY(20px);
-  animation: fadeIn 1s ease-in-out forwards;
-
-  @keyframes fadeIn {
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
+const TitleMiniText = styled(motion.div)`
+  font-size: 28px;
+  font-weight: bold;
 `;
 
-const Subtitle = styled.p`
-  font-size: 18px;
-  color: #555;
-  line-height: 1.6;
-  max-width: 800px;
-  opacity: 0;
-  transform: translateY(20px);
-  animation: fadeIn 1s ease-in-out forwards;
-  animation-delay: 0.3s;
+const TitleText = styled(motion.div)`
+  font-size: 82px;
+  font-weight: bold;
+  padding-top: 30px;
 `;
 
-const ImageWrapper = styled.div`
+const EssenceFrame = styled.div`
   width: 100%;
-  max-width: 600px;
-  height: 350px;
-  margin-top: 30px;
-  border: 3px solid #ddd;
-  border-radius: 12px;
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  height: 400px;
+  margin-top: 150px;
+  display: flex;
+  justify-content: space-between;
+`;
+
+const EssenceList = styled(motion.li)`
+  width: 30%;
+  height: 100%;
+  border-top: solid 1.5px;
+  border-bottom: solid 1.5px;
+  list-style-type: none;
   display: flex;
   align-items: center;
-  justify-content: center;
-  background-color: #f5f5f5;
-  opacity: 0;
-  transform: translateY(20px);
-  animation: fadeIn 1s ease-in-out forwards;
-  animation-delay: 0.6s;
 `;
 
-const ImageText = styled.span`
-  font-size: 16px;
-  color: #888;
+const EssenceIn = styled.div`
+  width: auto;
+  height: 60%;
+  display: flex;
+  flex-direction: column;
 `;
 
-export const ItemFrame2 = () => {
+const EssenceTitle = styled.div`
+  display: flex;
+  position: relative;
+`;
+
+const EssenceText = styled.h2`
+  padding-top: 50px;
+`;
+
+const EssenceContent = styled.p`
+  padding-top: 18px;
+  font-size: 20px;
+  color: #222529;
+`;
+
+const EssenceItem = ({ title, minitext, content, content2, delay, isVisible }) => {
   return (
-    <Container>
-      <Title>🎨 나만의 커스텀 키보드를 만들어보세요!</Title>
-      <Subtitle>
-        원하는 키 스위치, 키캡, 레이아웃까지!  
-        당신만의 개성을 담아 제작할 수 있는 커스텀 키보드 플랫폼을 경험해보세요.
-      </Subtitle>
-      <ImageWrapper>
-        <ImageText>이미지가 들어갈 공간</ImageText>
-      </ImageWrapper>
-    </Container>
+    <EssenceList
+      initial={{ opacity: 0, y: 50 }}
+      animate={isVisible ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
+      transition={{ delay, duration: 0.8, ease: "easeOut" }}
+    >
+      <EssenceIn>
+        <EssenceTitle>
+          <h1
+            style={{
+              fontSize: "52px",
+              position: "relative",
+              display: "inline-block",
+            }}
+          >
+            {title}
+            <h6
+              style={{
+                position: "absolute",
+                top: "0px",
+                right: "-20px",
+                fontSize: "24px",
+                color: "#888888",
+              }}
+            >
+              {minitext}
+            </h6>
+          </h1>
+        </EssenceTitle>
+        <EssenceText>{content}</EssenceText>
+        <EssenceContent dangerouslySetInnerHTML={{ __html: content2 }} />
+      </EssenceIn>
+    </EssenceList>
   );
 };
 
+export const ItemFrame2 = ({ isVisible }) => {
+  return (
+    <Container
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 1 }}
+    >
+      <Frame>
+        <TitleFrame
+          initial={{ opacity: 0, y: -20 }}
+          animate={isVisible ? { opacity: 1, y: 0 } : { opacity: 0, y: -20 }}
+          transition={{ duration: 1, ease: "easeOut" }}
+        >
+          <TitleMiniText>our spirit</TitleMiniText>
+          <TitleText>our essence</TitleText>
+        </TitleFrame>
+        <EssenceFrame>
+          <EssenceItem
+            title="자유롭게"
+            minitext="1"
+            content="free"
+            content2="키보드 디자인을 몰라도 <br /> 누구나 자유롭게"
+            delay={0.2}
+            isVisible={isVisible}
+          />
+          <EssenceItem
+            title="창의적인"
+            minitext="2"
+            content="creative"
+            content2="나만의 개성을 담아 <br /> 창의적으로 커스터마이징"
+            delay={0.7}
+            isVisible={isVisible}
+          />
+          <EssenceItem
+            title="연결된"
+            minitext="3"
+            content="connected"
+            content2="커뮤니티와 소통하며 <br /> 경험을 공유하는 공간"
+            delay={1.2}
+            isVisible={isVisible}
+          />
+        </EssenceFrame>
+      </Frame>
+    </Container>
+  );
+};
