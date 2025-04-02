@@ -498,7 +498,7 @@ const UserEdit = () => {
                   onChange={handleChange}
                   placeholder="새 비밀번호"
                 />
-                <HelpText>8자 이상의 영문, 숫자, 특수문자 조합</HelpText>
+                {/* <HelpText>8자 이상의 영문, 숫자, 특수문자 조합</HelpText> */}
               </FormGroup>
 
               <FormGroup>
