@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { RxHamburgerMenu } from "react-icons/rx";
 import { FaUserCircle } from "react-icons/fa";
 import { Profile } from "../components/modal/Profile";
-import { useAuthStore } from "../api/useAuthStore ";
+import { useAuthStore } from "../api/useAuthStore";
 
 const Container = styled.div`
   display: flex;
@@ -104,9 +104,7 @@ export const Header = () => {
   const fixedPages = ["/signin", "/signup", "/mypage"];
 
   const isFixedPage = (pathname) => {
-    return (
-      fixedPages.includes(pathname) || pathname.startsWith("/custompage")
-    ); // custompage의 하위 경로 포함
+    return fixedPages.includes(pathname) || pathname.startsWith("/custompage"); // custompage의 하위 경로 포함
   };
 
   useEffect(() => {
@@ -186,4 +184,3 @@ export const Header = () => {
     </Container>
   );
 };
-

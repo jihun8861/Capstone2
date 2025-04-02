@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { useAuthStore } from "../../api/useAuthStore ";
+import { useAuthStore } from "../../api/useAuthStore";
 
 export const KakaoRedirect = () => {
   const navigate = useNavigate();

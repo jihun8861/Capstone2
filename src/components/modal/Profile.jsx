@@ -3,7 +3,7 @@ import styled from "styled-components";
 import { BsPerson, BsHeart } from "react-icons/bs";
 import { FiPower } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
-import { useAuthStore } from "../../api/useAuthStore ";
+import { useAuthStore } from "../../api/useAuthStore";
 
 const Modal = styled.div`
   position: absolute;
@@ -77,15 +77,13 @@ export const Profile = ({ onClose, onLogout }) => {
   return (
     <Modal ref={modalRef}>
       <ProfileSection>
-        <ProfileImage>
-          
-        </ProfileImage>
+        <ProfileImage></ProfileImage>
         <ProfileInfo>
           <h4>{user.name}</h4>
           <span>{user.email}</span>
         </ProfileInfo>
       </ProfileSection>
-      
+
       <ModalItem onClick={() => handleNavigate("/mypage")}>
         <BsPerson /> 마이페이지
       </ModalItem>

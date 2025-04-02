@@ -16,13 +16,13 @@ const Container = styled.footer`
 
 const Links = styled.div`
   margin-bottom: 0.5rem;
-  
+
   a {
     color: #bbbbbb;
     text-decoration: none;
     margin: 0 10px;
     font-size: 0.85rem;
-    
+
     &:hover {
       color: #ffffff;
       text-decoration: underline;
@@ -35,7 +35,10 @@ export const Footer = () => {
 
   const hideFooterPages = ["/custompage"];
   const isFixedPage = (pathname) => {
-    return hideFooterPages.includes(pathname) || /^\/custompage\/\d+%?$/.test(pathname);
+    return (
+      hideFooterPages.includes(pathname) ||
+      /^\/custompage\/\d+%?$/.test(pathname)
+    );
   };
 
   if (isFixedPage(location.pathname)) {
@@ -45,7 +48,8 @@ export const Footer = () => {
   return (
     <Container>
       <Links>
-        <a href="/about">About</a> | <a href="/contact">Contact</a> | <a href="/terms">Terms</a>
+        <a href="/about">About</a> | <a href="/contact">Contact</a> |{" "}
+        <a href="/terms">Terms</a>
       </Links>
       <div>© 2025 Capstone Design. All rights reserved.</div>
     </Container>
