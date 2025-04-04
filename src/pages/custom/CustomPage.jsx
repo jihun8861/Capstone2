@@ -3,10 +3,10 @@ import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { FiRefreshCw, FiShare2, FiSave, FiX } from "react-icons/fi";
 import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
-import { ColorSelect } from "../../color/ColorSelect";
 import { ThreeDModel } from "../../components/model/ThreeDModel";
 import { useAuthStore } from "../../api/useAuthStore";
 import { saveItem } from "../../api/saveItem";
+import { RestartModal } from "../../components/modal/RestartModal";
 
 const Container = styled.div`
   display: flex;
@@ -71,7 +71,7 @@ const CustomFrame = styled.div`
 
 const SelectFrame = styled.div`
   position: absolute;
-  top: 50%;
+  top: 45%;
   left: 30px;
   transform: translateY(-80%);
   width: 280px;
@@ -119,7 +119,7 @@ const PaginationFrame = styled.div`
   max-width: 400px;
   width: auto;
   left: 30px;
-  bottom: 100px;
+  bottom: 180px;
   background-color: transparent;
   border: 2px solid #e1e1e1;
   display: flex;
@@ -195,115 +195,11 @@ const SaveButton = styled.button`
   }
 `;
 
-// 모달 관련 스타일
-const ModalOverlay = styled.div`
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 100;
-`;
-
-const ModalContainer = styled.div`
-  background-color: white;
-  width: 100%;
-  max-width: 500px;
-  border-radius: 0;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-`;
-
-const ModalHeader = styled.div`
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  position: relative;
-`;
-
-const ModalTitle = styled.img`
-  width: 150px;
-  padding-top: 15px;
-`;
-
-const CloseButton = styled.button`
-  background: none;
-  border: none;
-  font-size: 42px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  color: #333;
-  position: absolute;
-  right: 16px;
-  top: 30%;
-`;
-
-const ModalContent = styled.div`
-  display: flex;
-  flex-direction: column;
-  padding: 20px 0;
-`;
-
-const ModelImageContainer = styled.div`
-  width: 100%;
-  height: 300px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  overflow: hidden;
-  margin-bottom: 20px;
-  background-color: #eaecef;
-`;
-
-const ModelImage = styled.img`
-  width: 170%;
-  padding-right: 80px;
-  
-`;
-
-const MessageText = styled.p`
-  text-align: center;
-  font-size: 18px;
-  margin: 20px 0 40px;
-  padding: 0 20px;
-`;
-
-const ButtonContainer = styled.div`
-  display: flex;
-  width: 100%;
-`;
-
-const ButtonHalf = styled.button`
-  flex: 1;
-  padding: 18px 0;
-  font-size: 18px;
-  font-weight: bold;
-  cursor: pointer;
-  border: none;
-
-  &.cancel {
-    background-color: #333;
-    color: white;
-  }
-
-  &.confirm {
-    background-color: #004aad;
-    color: white;
-  }
-`;
-
 export const CustomPage = () => {
   const { size } = useParams();
-  const selectedSize = size ? `${size}%` : "Custom Keyboard";
   const { user } = useAuthStore();
   const modelRef = useRef();
+  const selectedSize = size ? `${size}%` : "Custom Keyboard";
 
   const [selectedModel, setSelectedModel] = useState(null);
   const [prevSelectedModel, setPrevSelectedModel] = useState(null);
@@ -324,25 +220,17 @@ export const CustomPage = () => {
   };
 
   const handleRestart = () => {
-    // ThreeDModel 컴포넌트에서 스크린샷 가져오기
     if (modelRef.current && modelRef.current.getScreenshot) {
-      const screenshot = modelRef.current.getScreenshot();
-      setModelImage(screenshot);
-      setShowModal(true);
+      setModelImage(modelRef.current.getScreenshot());
     } else {
-      // 스크린샷을 가져올 수 없는 경우 기본 이미지 사용
       setModelImage("/images/default-model.png");
-      setShowModal(true);
     }
+    setShowModal(true);
   };
 
   const handleConfirmRestart = () => {
     setShowModal(false);
     window.location.reload();
-  };
-
-  const handleCloseModal = () => {
-    setShowModal(false);
   };
 
   useEffect(() => {
@@ -364,6 +252,7 @@ export const CustomPage = () => {
       keycapcolor: "test",
       design: "test",
       switchcolor: "test",
+      imageurl: "test"
     };
 
     const result = await saveItem(userData);
@@ -442,37 +331,13 @@ export const CustomPage = () => {
         />
       </CustomFrame>
 
-      <ColorSelect />
-
-      {showModal && (
-        <ModalOverlay>
-          <ModalContainer>
-            <ModalHeader>
-              <ModalTitle src="/images/custom.png"/>
-              <CloseButton onClick={handleCloseModal}>
-                <FiX />
-              </CloseButton>
-            </ModalHeader>
-            <ModalContent>
-              <ModelImageContainer>
-                <ModelImage src={modelImage} alt="현재 키보드 모델" />
-              </ModelImageContainer>
-              <MessageText>
-                작업하신 디자인을 지우고 다시 시작하시겠습니까? 디자인을
-                저장하시면 나중에 이어서 디자인할 수 있습니다.
-              </MessageText>
-            </ModalContent>
-            <ButtonContainer>
-              <ButtonHalf className="cancel" onClick={handleCloseModal}>
-                취소
-              </ButtonHalf>
-              <ButtonHalf className="confirm" onClick={handleConfirmRestart}>
-                다시 시작하기
-              </ButtonHalf>
-            </ButtonContainer>
-          </ModalContainer>
-        </ModalOverlay>
-      )}
+      <RestartModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        onConfirm={handleConfirmRestart}
+        imageSrc={modelImage}
+        message="작업하신 디자인을 지우고 다시 시작하시겠습니까? 디자인을 저장하시면 나중에 이어서 디자인할 수 있습니다."
+      />
     </Container>
   );
 };

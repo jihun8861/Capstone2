@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, forwardRef, useImperativeHandle } from "react";
+import React, { useRef, useState, useEffect, forwardRef, useImperativeHandle, useCallback } from "react";
 import styled from "styled-components";
 import { KEYBOARD_POSITIONS } from "../../data/keyboardPositions";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
@@ -96,7 +96,50 @@ const ScreenshotHandler = forwardRef(({ children }, ref) => {
   return <>{children}</>;
 });
 
-const Model = ({ size, selectedModel }) => {
+// 키보드 중심점 계산을 위한 컴포넌트
+const KeyboardCenter = ({ size, onCenterCalculated }) => {
+  const { scene } = useThree();
+  
+  useEffect(() => {
+    // 키보드 모델의 중심점을 계산하기 위한 바운딩 박스 생성
+    const box = new THREE.Box3().setFromObject(scene);
+    const center = new THREE.Vector3();
+    box.getCenter(center);
+    
+    if (onCenterCalculated) {
+      onCenterCalculated(center);
+    }
+  }, [scene, size, onCenterCalculated]);
+  
+  return null;
+};
+
+// OrbitControls를 커스터마이징한 컴포넌트
+const CenteredOrbitControls = ({ target }) => {
+  const controlsRef = useRef();
+  
+  useEffect(() => {
+    if (controlsRef.current && target) {
+      // 오빗 컨트롤의 타겟을 키보드 중심으로 설정
+      controlsRef.current.target.copy(target);
+      controlsRef.current.update();
+    }
+  }, [target]);
+  
+  return (
+    <OrbitControls
+      ref={controlsRef}
+      enableZoom={true}
+      minDistance={6}
+      maxDistance={20}
+      zoomSpeed={0.3}
+      maxPolarAngle={Math.PI / 2}
+      rotateSpeed={0.5}
+    />
+  );
+};
+
+const Model = ({ size, selectedModel, onCenterCalculated }) => {
   const [baseAnimationProgress, setBaseAnimationProgress] = useState(0);
   const [switchAnimationProgress, setSwitchAnimationProgress] = useState(0);
   const [keycapAnimationProgress, setKeycapAnimationProgress] = useState(0);
@@ -104,6 +147,23 @@ const Model = ({ size, selectedModel }) => {
   const [showKeycap, setShowKeycap] = useState(false);
   const groupRef = useRef();
   const scale = KEYBOARD_POSITIONS.getScale(size);
+  
+  // 애니메이션 상태 추적을 위한 ref
+  const baseAnimationExecuted = useRef(false);
+  const switchAnimationExecuted = useRef({});
+  const keycapAnimationExecuted = useRef({});
+  
+  // size가 바뀌면 애니메이션 초기화
+  useEffect(() => {
+    baseAnimationExecuted.current = false;
+    switchAnimationExecuted.current = {};
+    keycapAnimationExecuted.current = {};
+    setBaseAnimationProgress(0);
+    setSwitchAnimationProgress(0);
+    setKeycapAnimationProgress(0);
+    setShowSwitch(false);
+    setShowKeycap(false);
+  }, [size]);
 
   const BASE_MODEL_PATHS = [
     `/keyboard/${size}keyboard/1.BottomCase.glb`,
@@ -118,7 +178,11 @@ const Model = ({ size, selectedModel }) => {
   const KEYCAP_MODEL_PATH = `/keyboard/${size}keyboard/${size}Keycaps.glb`;
 
   useEffect(() => {
+    // 이미 실행된 애니메이션은 재실행하지 않음
+    if (baseAnimationExecuted.current) return;
+    
     const animateBaseParts = () => {
+      baseAnimationExecuted.current = true;
       const duration = 2000;
       const startTime = Date.now();
 
@@ -130,6 +194,17 @@ const Model = ({ size, selectedModel }) => {
 
         if (progress < 1) {
           requestAnimationFrame(updateAnimation);
+        } else {
+          // 애니메이션 완료 후 모델의 중심점을 계산
+          if (groupRef.current) {
+            const box = new THREE.Box3().setFromObject(groupRef.current);
+            const center = new THREE.Vector3();
+            box.getCenter(center);
+            
+            if (onCenterCalculated) {
+              onCenterCalculated(center);
+            }
+          }
         }
       };
 
@@ -138,11 +213,18 @@ const Model = ({ size, selectedModel }) => {
 
     const timer = setTimeout(animateBaseParts, 500);
     return () => clearTimeout(timer);
-  }, [size]);
+  }, [size, onCenterCalculated]);
 
   useEffect(() => {
     if (selectedModel === "switch" && !showSwitch) {
       setShowSwitch(true);
+      
+      // 이미 실행된 스위치 애니메이션은 재실행하지 않음
+      if (switchAnimationExecuted.current[size]) {
+        setSwitchAnimationProgress(1); // 바로 최종 상태로 설정
+        return;
+      }
+      
       setSwitchAnimationProgress(0);
   
       setTimeout(() => {
@@ -157,6 +239,8 @@ const Model = ({ size, selectedModel }) => {
   
           if (progress < 1) {
             requestAnimationFrame(updateAnimation);
+          } else {
+            switchAnimationExecuted.current[size] = true;
           }
         };
   
@@ -164,6 +248,13 @@ const Model = ({ size, selectedModel }) => {
       }, 100);
     } else if (selectedModel === "keycap" && !showKeycap) {
       setShowKeycap(true);
+      
+      // 이미 실행된 키캡 애니메이션은 재실행하지 않음
+      if (keycapAnimationExecuted.current[size]) {
+        setKeycapAnimationProgress(1); // 바로 최종 상태로 설정
+        return;
+      }
+      
       setKeycapAnimationProgress(0);
   
       setTimeout(() => {
@@ -178,13 +269,15 @@ const Model = ({ size, selectedModel }) => {
   
           if (progress < 1) {
             requestAnimationFrame(updateAnimation);
+          } else {
+            keycapAnimationExecuted.current[size] = true;
           }
         };
   
         requestAnimationFrame(updateAnimation);
       }, 100);
     }
-  }, [selectedModel]);
+  }, [selectedModel, size, showSwitch, showKeycap]);
   
   return (
     <group ref={groupRef}>
@@ -230,6 +323,7 @@ export const ThreeDModel = forwardRef(({ size, selectedModel }, ref) => {
   const keyboardSize = size || urlSize || "100";
   const validSize = ["60", "80", "100"].includes(keyboardSize) ? keyboardSize : "100";
   const screenshotRef = useRef();
+  const [keyboardCenter, setKeyboardCenter] = useState(new THREE.Vector3(0, 0, 0));
   
   // 부모 컴포넌트에서 스크린샷을 가져올 수 있는 함수 노출
   useImperativeHandle(ref, () => ({
@@ -241,13 +335,18 @@ export const ThreeDModel = forwardRef(({ size, selectedModel }, ref) => {
     }
   }));
 
+  // useCallback을 사용하여 함수 메모이제이션
+  const handleCenterCalculated = useCallback((center) => {
+    setKeyboardCenter(center);
+  }, []);
+
   return (
     <Container>
       <Canvas
         shadows
         camera={{
           position: [0, 7, 12],
-          fov: 35,
+          fov: 40,
         }}
       >
         <ScreenshotHandler ref={screenshotRef}>
@@ -267,15 +366,14 @@ export const ThreeDModel = forwardRef(({ size, selectedModel }, ref) => {
           />
           <pointLight position={[-5, 5, 5]} intensity={0.8} castShadow />
 
-          <OrbitControls
-            enableZoom={true}
-            minDistance={6}
-            maxDistance={20}
-            zoomSpeed={0.3}
-            maxPolarAngle={Math.PI / 2}
-            rotateSpeed={0.5}
+          {/* 중심점 기준 회전을 위한 커스텀 OrbitControls */}
+          <CenteredOrbitControls target={keyboardCenter} />
+          
+          <Model 
+            size={validSize} 
+            selectedModel={selectedModel} 
+            onCenterCalculated={handleCenterCalculated}
           />
-          <Model size={validSize} selectedModel={selectedModel} />
         </ScreenshotHandler>
       </Canvas>
     </Container>
