@@ -1,7 +1,9 @@
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import styled from "styled-components";
-import UserEdit from "../mypage/UserEdit"; // 새로 만든 UserEdit.jsx 가져오기
+import UserEdit from "../mypage/UserEdit";
+import MyCustomKeyboard from "../mypage/MyCustomKeyboard";
+import FavoriteProducts from "../mypage/FavoriteProducts";
 
 const Container = styled.div`
   display: flex;
@@ -13,14 +15,14 @@ const Container = styled.div`
 `;
 
 const Sidebar = styled.div`
-  width: 250px;
+  width: 220px;
   border-right: 1px solid #ddd;
 `;
 
 const MenuItem = styled.div`
   padding: 30px 20px;
   cursor: pointer;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: ${(props) => (props.$isActive ? "bold" : "normal")};
   color: ${(props) => (props.$isActive ? "#000" : "#666")};
   background: ${(props) => (props.$isActive ? "#f0f0f0" : "transparent")};
@@ -48,11 +50,11 @@ export const MyPage = () => {
   const renderContent = () => {
     switch (selectedMenu) {
       case "회원정보 수정":
-        return <UserEdit />; // ✅ UserEdit 컴포넌트 렌더링
+        return <UserEdit />;
       case "나의 커스텀 키보드":
-        return <div>커스텀 키보드 화면</div>;
+        return <MyCustomKeyboard />;
       case "관심상품":
-        return <div>관심상품 화면</div>;
+        return <FavoriteProducts />;
       default:
         return null;
     }
