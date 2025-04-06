@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import styled from "styled-components";
+import { useAuthStore } from "../../api/useAuthStore";
 import axios from "axios";
 
 const Container = styled.div`
@@ -308,20 +309,25 @@ const MyCustomKeyboard = () => {
   const [error, setError] = useState(null);
   const horizontalScrollRef = useRef(null);
 
-  // 사용자 이메일 - 실제 앱에서는 인증 시스템에서 가져옵니다
-  const userEmail = "test@naver.com";
+  const { user } = useAuthStore();
+  const userEmail = user?.email || "";
 
   useEffect(() => {
     const fetchKeyboards = async () => {
+      if (!userEmail) {
+        setLoading(false);
+        setError("로그인이 필요합니다.");
+        return;
+      }
+
       try {
         setLoading(true);
-        // API 엔드포인트로 요청
         const response = await axios.post(
           "https://port-0-edcustom-lxx6l4ha4fc09fa0.sel5.cloudtype.app/items/find",
-          { email: userEmail }, // params가 아닌 body에 직접 전달
+          { email: userEmail },
           {
             headers: {
-              "Content-Type": "application/json;charset=UTF-8", // 헤더 명시적 설정
+              "Content-Type": "application/json;charset=UTF-8",
             },
           }
         );
@@ -337,6 +343,7 @@ const MyCustomKeyboard = () => {
         }
       } catch (err) {
         console.error("키보드 목록 불러오기 오류:", err);
+        console.log(userEmail);
         setError("키보드 목록을 불러오는 데 실패했습니다. 다시 시도해 주세요.");
       } finally {
         setLoading(false);
@@ -358,12 +365,23 @@ const MyCustomKeyboard = () => {
     }
   };
 
-  // 키보드 타입 표시 또는 기본 텍스트 반환 함수
   const getKeyboardName = (keyboard, index) => {
     return keyboard.keyboardtype && keyboard.keyboardtype !== "string"
       ? keyboard.keyboardtype
       : `커스텀 키보드 ${index + 1}`;
   };
+
+  if (!userEmail) {
+    return (
+      <Container>
+        <Title>나의 커스텀 키보드</Title>
+        <ErrorState>
+          <h3>로그인이 필요합니다</h3>
+          <p>키보드 목록을 보려면 로그인해 주세요.</p>
+        </ErrorState>
+      </Container>
+    );
+  }
 
   if (loading) {
     return (
