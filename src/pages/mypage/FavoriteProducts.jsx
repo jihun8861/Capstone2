@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import styled from "styled-components";
 
 const Container = styled.div`
@@ -119,6 +119,7 @@ const HorizontalKeyboardCard = styled.div`
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   transition: transform 0.2s, box-shadow 0.2s;
   cursor: pointer;
+  position: relative;
 
   &:last-child {
     margin-right: 0;
@@ -158,6 +159,18 @@ const KeyboardGrid = styled.div`
   grid-template-columns: repeat(5, 1fr);
   gap: 20px;
   width: 100%;
+
+  @media (max-width: 1200px) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  @media (max-width: 768px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr;
+  }
 `;
 
 const KeyboardCard = styled.div`
@@ -168,6 +181,7 @@ const KeyboardCard = styled.div`
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   transition: transform 0.2s, box-shadow 0.2s;
   cursor: pointer;
+  position: relative;
 
   &:hover {
     transform: translateY(-5px);
@@ -222,6 +236,44 @@ const EmptyState = styled.div`
   margin-top: 180px;
 `;
 
+const LoadingState = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  text-align: center;
+  margin-top: 180px;
+`;
+
+const LikesBadge = styled.div`
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: rgba(0, 0, 0, 0.6);
+  color: white;
+  border-radius: 20px;
+  padding: 5px 10px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  z-index: 5;
+`;
+
+const LikeIcon = () => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="red"
+    stroke="white"
+    strokeWidth="1"
+    style={{ marginRight: "4px" }}
+  >
+    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+  </svg>
+);
+
 const ArrowIcon = ({ direction }) => (
   <svg
     width="16"
@@ -241,18 +293,63 @@ const ArrowIcon = ({ direction }) => (
   </svg>
 );
 
-const mockKeyboards = [
-  //{ id: 1, name: "닉네임", date: "2025-03-28", image: null },
-];
+const formatDate = (dateString) => {
+  const date = new Date(dateString);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
+    2,
+    "0"
+  )}-${String(date.getDate()).padStart(2, "0")}`;
+};
 
 const FavoriteProducts = () => {
   const [viewMode, setViewMode] = useState("vertical");
+  const [keyboards, setKeyboards] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const horizontalScrollRef = useRef(null);
-  const hasKeyboards = mockKeyboards.length > 0;
+
+  useEffect(() => {
+    const fetchLikedKeyboards = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(
+          "https://port-0-edcustom-lxx6l4ha4fc09fa0.sel5.cloudtype.app/checkliked",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ memberid: 1 }), // 우선 1로 고정
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error("API 요청에 실패했습니다.");
+        }
+
+        const result = await response.json();
+
+        if (result.status === "OK" && result.data) {
+          setKeyboards(result.data);
+        } else {
+          throw new Error(
+            result.message || "데이터를 불러오는데 실패했습니다."
+          );
+        }
+      } catch (err) {
+        setError(err.message);
+        console.error("좋아요한 키보드를 불러오는데 실패했습니다:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLikedKeyboards();
+  }, []);
 
   const scroll = (direction) => {
     if (horizontalScrollRef.current) {
-      const scrollAmount = 1200;
+      const scrollAmount = 300;
       const currentScroll = horizontalScrollRef.current.scrollLeft;
 
       horizontalScrollRef.current.scrollLeft =
@@ -261,6 +358,33 @@ const FavoriteProducts = () => {
           : currentScroll + scrollAmount;
     }
   };
+
+  if (loading) {
+    return (
+      <Container>
+        <Title>관심 상품</Title>
+        <Description>좋아요를 누른 키보드 목록입니다.</Description>
+        <LoadingState>
+          <h3>데이터를 불러오는 중입니다...</h3>
+        </LoadingState>
+      </Container>
+    );
+  }
+
+  if (error) {
+    return (
+      <Container>
+        <Title>관심 상품</Title>
+        <Description>좋아요를 누른 키보드 목록입니다.</Description>
+        <EmptyState>
+          <h3>오류가 발생했습니다.</h3>
+          <p>{error}</p>
+        </EmptyState>
+      </Container>
+    );
+  }
+
+  const hasKeyboards = keyboards.length > 0;
 
   return (
     <Container>
@@ -288,18 +412,25 @@ const FavoriteProducts = () => {
         viewMode === "vertical" ? (
           <VerticalScroll>
             <KeyboardGrid>
-              {mockKeyboards.map((keyboard) => (
+              {keyboards.map((keyboard) => (
                 <KeyboardCard key={keyboard.id}>
-                  <KeyboardImage image={keyboard.image}>
-                    {!keyboard.image && (
+                  <LikesBadge>
+                    <LikeIcon /> {keyboard.likes}
+                  </LikesBadge>
+                  <KeyboardImage image={keyboard.imageUrl}>
+                    {!keyboard.imageUrl && (
                       <KeyboardImagePlaceholder>
                         키보드 이미지
                       </KeyboardImagePlaceholder>
                     )}
                   </KeyboardImage>
                   <KeyboardInfo>
-                    <KeyboardName>{keyboard.name}</KeyboardName>
-                    <KeyboardDate>생성일: {keyboard.date}</KeyboardDate>
+                    <KeyboardName>
+                      {keyboard.keyboardtype || `키보드 #${keyboard.id}`}
+                    </KeyboardName>
+                    <KeyboardDate>
+                      생성일: {formatDate(keyboard.createdAt)}
+                    </KeyboardDate>
                   </KeyboardInfo>
                 </KeyboardCard>
               ))}
@@ -312,18 +443,25 @@ const FavoriteProducts = () => {
             </LeftArrow>
 
             <HorizontalScroll ref={horizontalScrollRef}>
-              {mockKeyboards.map((keyboard) => (
+              {keyboards.map((keyboard) => (
                 <HorizontalKeyboardCard key={keyboard.id}>
-                  <KeyboardImage image={keyboard.image}>
-                    {!keyboard.image && (
+                  <LikesBadge>
+                    <LikeIcon /> {keyboard.likes}
+                  </LikesBadge>
+                  <KeyboardImage image={keyboard.imageUrl}>
+                    {!keyboard.imageUrl && (
                       <KeyboardImagePlaceholder>
                         키보드 이미지
                       </KeyboardImagePlaceholder>
                     )}
                   </KeyboardImage>
                   <KeyboardInfo>
-                    <KeyboardName>{keyboard.name}</KeyboardName>
-                    <KeyboardDate>생성일: {keyboard.date}</KeyboardDate>
+                    <KeyboardName>
+                      {keyboard.keyboardtype || `키보드 #${keyboard.id}`}
+                    </KeyboardName>
+                    <KeyboardDate>
+                      생성일: {formatDate(keyboard.createdAt)}
+                    </KeyboardDate>
                   </KeyboardInfo>
                 </HorizontalKeyboardCard>
               ))}
