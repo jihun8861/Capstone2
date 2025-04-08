@@ -1,4 +1,10 @@
-import React, { useRef, useState, useEffect, forwardRef, useImperativeHandle, useCallback } from "react";
+import React, {
+  useRef,
+  useState,
+  useEffect,
+  forwardRef,
+  useImperativeHandle,
+} from "react";
 import styled from "styled-components";
 import { KEYBOARD_POSITIONS } from "../../data/keyboardPositions";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
@@ -14,24 +20,63 @@ const Container = styled.div`
   align-items: center;
 `;
 
-const KeyboardPart = ({ modelPath, index, animationProgress, scale, partType, size, visible = true }) => {
+const KeyboardPart = ({
+  modelPath,
+  index,
+  animationProgress,
+  scale,
+  partType,
+  size,
+  visible = true,
+  color = null,
+}) => {
   const { scene } = useGLTF(modelPath);
   const modelRef = useRef();
+  const isTopCase = modelPath.includes("5.TopCase.glb");
 
   useEffect(() => {
     scene.traverse((child) => {
       if (child.isMesh) {
-        child.castShadow = true;
+        // 모든 메시에 대해 그림자를 받을 수 있게 하되
+        // 측면과 뒤쪽 그림자를 제거하기 위해 조명 설정으로 제어
         child.receiveShadow = true;
+
+        // 그림자 캐스팅은 일부 부품만 수행
+        // 상단 케이스는 그림자를 드리우지 않음
+        if (isTopCase) {
+          child.castShadow = false;
+        } else {
+          // 나머지 부품은 위에서 아래로만 그림자를 드리우도록 설정
+          child.castShadow = true;
+        }
+
+        // 색상 적용 (기존과 동일)
+        if (isTopCase && color) {
+          const originalMaterial = child.material;
+          const newMaterial = new THREE.MeshStandardMaterial({
+            color: new THREE.Color(color),
+            roughness: originalMaterial?.roughness ?? 0.5,
+            metalness: originalMaterial?.metalness ?? 0.3,
+          });
+          child.material = newMaterial;
+        }
       }
     });
-  }, [scene]);
+  }, [scene, color, isTopCase]);
 
   useFrame(() => {
     if (modelRef.current) {
       if (partType === "base") {
-        const initialPos = KEYBOARD_POSITIONS.getInitialPosition(size, partType, index);
-        const finalPos = KEYBOARD_POSITIONS.getFinalPosition(size, partType, index);
+        const initialPos = KEYBOARD_POSITIONS.getInitialPosition(
+          size,
+          partType,
+          index
+        );
+        const finalPos = KEYBOARD_POSITIONS.getFinalPosition(
+          size,
+          partType,
+          index
+        );
 
         modelRef.current.position.x = THREE.MathUtils.lerp(
           initialPos[0],
@@ -49,7 +94,10 @@ const KeyboardPart = ({ modelPath, index, animationProgress, scale, partType, si
           animationProgress
         );
       } else {
-        const initialPos = KEYBOARD_POSITIONS.getInitialPosition(size, partType);
+        const initialPos = KEYBOARD_POSITIONS.getInitialPosition(
+          size,
+          partType
+        );
         const finalPos = KEYBOARD_POSITIONS.getFinalPosition(size, partType);
 
         modelRef.current.position.x = initialPos[0];
@@ -63,72 +111,40 @@ const KeyboardPart = ({ modelPath, index, animationProgress, scale, partType, si
     }
   });
 
-  return visible ? <primitive ref={modelRef} object={scene} scale={scale} /> : null;
+  return visible ? (
+    <primitive ref={modelRef} object={scene} scale={scale} />
+  ) : null;
 };
 
-// 스크린샷 핸들러 컴포넌트 추가
 const ScreenshotHandler = forwardRef(({ children }, ref) => {
   const { gl, scene, camera } = useThree();
-  
+
   useImperativeHandle(ref, () => ({
     takeScreenshot: () => {
-      // 현재 카메라의 위치와 회전 값을 저장
       const originalPosition = camera.position.clone();
       const originalRotation = camera.rotation.clone();
 
-      // 카메라를 기본 정면 위치로 설정
       camera.position.set(0, 9, 12);
       camera.lookAt(new THREE.Vector3(0, 0, 0));
       gl.render(scene, camera);
 
-      // 캔버스에서 데이터 URL 추출
-      const dataURL = gl.domElement.toDataURL('image/png');
+      const dataURL = gl.domElement.toDataURL("image/png");
 
-      // 원래 카메라 위치 및 회전으로 복귀
       camera.position.copy(originalPosition);
       camera.rotation.copy(originalRotation);
       gl.render(scene, camera);
 
       return dataURL;
-    }
+    },
   }));
 
   return <>{children}</>;
 });
 
-// 키보드 중심점 계산을 위한 컴포넌트
-const KeyboardCenter = ({ size, onCenterCalculated }) => {
-  const { scene } = useThree();
-  
-  useEffect(() => {
-    // 키보드 모델의 중심점을 계산하기 위한 바운딩 박스 생성
-    const box = new THREE.Box3().setFromObject(scene);
-    const center = new THREE.Vector3();
-    box.getCenter(center);
-    
-    if (onCenterCalculated) {
-      onCenterCalculated(center);
-    }
-  }, [scene, size, onCenterCalculated]);
-  
-  return null;
-};
-
-// OrbitControls를 커스터마이징한 컴포넌트
-const CenteredOrbitControls = ({ target }) => {
-  const controlsRef = useRef();
-  
-  useEffect(() => {
-    if (controlsRef.current && target) {
-      // 오빗 컨트롤의 타겟을 키보드 중심으로 설정
-      controlsRef.current.target.copy(target);
-      controlsRef.current.update();
-    }
-  }, [target]);
-  
+// 기본 OrbitControls 컴포넌트로 대체
+const SimpleOrbitControls = () => {
   return (
     <OrbitControls
-      ref={controlsRef}
       enableZoom={true}
       minDistance={6}
       maxDistance={20}
@@ -139,7 +155,7 @@ const CenteredOrbitControls = ({ target }) => {
   );
 };
 
-const Model = ({ size, selectedModel, onCenterCalculated }) => {
+const Model = ({ size, selectedModel, baseColor }) => {
   const [baseAnimationProgress, setBaseAnimationProgress] = useState(0);
   const [switchAnimationProgress, setSwitchAnimationProgress] = useState(0);
   const [keycapAnimationProgress, setKeycapAnimationProgress] = useState(0);
@@ -147,13 +163,11 @@ const Model = ({ size, selectedModel, onCenterCalculated }) => {
   const [showKeycap, setShowKeycap] = useState(false);
   const groupRef = useRef();
   const scale = KEYBOARD_POSITIONS.getScale(size);
-  
-  // 애니메이션 상태 추적을 위한 ref
+
   const baseAnimationExecuted = useRef(false);
   const switchAnimationExecuted = useRef({});
   const keycapAnimationExecuted = useRef({});
-  
-  // size가 바뀌면 애니메이션 초기화
+
   useEffect(() => {
     baseAnimationExecuted.current = false;
     switchAnimationExecuted.current = {};
@@ -178,9 +192,8 @@ const Model = ({ size, selectedModel, onCenterCalculated }) => {
   const KEYCAP_MODEL_PATH = `/keyboard/${size}keyboard/${size}Keycaps.glb`;
 
   useEffect(() => {
-    // 이미 실행된 애니메이션은 재실행하지 않음
     if (baseAnimationExecuted.current) return;
-    
+
     const animateBaseParts = () => {
       baseAnimationExecuted.current = true;
       const duration = 2000;
@@ -189,22 +202,10 @@ const Model = ({ size, selectedModel, onCenterCalculated }) => {
       const updateAnimation = () => {
         const elapsed = Date.now() - startTime;
         const progress = Math.min(elapsed / duration, 1);
-
         setBaseAnimationProgress(progress);
 
         if (progress < 1) {
           requestAnimationFrame(updateAnimation);
-        } else {
-          // 애니메이션 완료 후 모델의 중심점을 계산
-          if (groupRef.current) {
-            const box = new THREE.Box3().setFromObject(groupRef.current);
-            const center = new THREE.Vector3();
-            box.getCenter(center);
-            
-            if (onCenterCalculated) {
-              onCenterCalculated(center);
-            }
-          }
         }
       };
 
@@ -213,72 +214,60 @@ const Model = ({ size, selectedModel, onCenterCalculated }) => {
 
     const timer = setTimeout(animateBaseParts, 500);
     return () => clearTimeout(timer);
-  }, [size, onCenterCalculated]);
+  }, [size]);
 
   useEffect(() => {
     if (selectedModel === "switch" && !showSwitch) {
       setShowSwitch(true);
-      
-      // 이미 실행된 스위치 애니메이션은 재실행하지 않음
       if (switchAnimationExecuted.current[size]) {
-        setSwitchAnimationProgress(1); // 바로 최종 상태로 설정
+        setSwitchAnimationProgress(1);
         return;
       }
-      
-      setSwitchAnimationProgress(0);
-  
+
       setTimeout(() => {
         const duration = 1500;
         const startTime = Date.now();
-  
+
         const updateAnimation = () => {
           const elapsed = Date.now() - startTime;
           const progress = Math.min(elapsed / duration, 1);
-  
           setSwitchAnimationProgress(progress);
-  
           if (progress < 1) {
             requestAnimationFrame(updateAnimation);
           } else {
             switchAnimationExecuted.current[size] = true;
           }
         };
-  
+
         requestAnimationFrame(updateAnimation);
       }, 100);
     } else if (selectedModel === "keycap" && !showKeycap) {
       setShowKeycap(true);
-      
-      // 이미 실행된 키캡 애니메이션은 재실행하지 않음
       if (keycapAnimationExecuted.current[size]) {
-        setKeycapAnimationProgress(1); // 바로 최종 상태로 설정
+        setKeycapAnimationProgress(1);
         return;
       }
-      
-      setKeycapAnimationProgress(0);
-  
+
       setTimeout(() => {
         const duration = 1500;
         const startTime = Date.now();
-  
+
         const updateAnimation = () => {
           const elapsed = Date.now() - startTime;
           const progress = Math.min(elapsed / duration, 1);
-  
           setKeycapAnimationProgress(progress);
-  
           if (progress < 1) {
             requestAnimationFrame(updateAnimation);
           } else {
             keycapAnimationExecuted.current[size] = true;
           }
         };
-  
+
         requestAnimationFrame(updateAnimation);
       }, 100);
     }
   }, [selectedModel, size, showSwitch, showKeycap]);
-  
+
   return (
     <group ref={groupRef}>
       {BASE_MODEL_PATHS.map((path, index) => (
@@ -290,6 +279,7 @@ const Model = ({ size, selectedModel, onCenterCalculated }) => {
           scale={scale}
           partType="base"
           size={size}
+          color={path.includes("5.TopCase.glb") ? baseColor : null}
         />
       ))}
 
@@ -318,64 +308,101 @@ const Model = ({ size, selectedModel, onCenterCalculated }) => {
   );
 };
 
-export const ThreeDModel = forwardRef(({ size, selectedModel }, ref) => {
-  const { size: urlSize } = useParams();
-  const keyboardSize = size || urlSize || "100";
-  const validSize = ["60", "80", "100"].includes(keyboardSize) ? keyboardSize : "100";
-  const screenshotRef = useRef();
-  const [keyboardCenter, setKeyboardCenter] = useState(new THREE.Vector3(0, 0, 0));
-  
-  // 부모 컴포넌트에서 스크린샷을 가져올 수 있는 함수 노출
-  useImperativeHandle(ref, () => ({
-    getScreenshot: () => {
-      if (screenshotRef.current) {
-        return screenshotRef.current.takeScreenshot();
+// 추가: 그림자 제한 영역 헬퍼 함수 컴포넌트
+const ShadowLimiter = () => {
+  const { scene } = useThree();
+
+  useEffect(() => {
+    // Three.js에서 제공하는 모든 조명에 그림자 제한 설정
+    scene.traverse((object) => {
+      if (object.isLight && object.shadow) {
+        // 그림자 방향 제한 - 거의 수직 방향으로만 그림자가 생성되도록 설정
+        object.shadow.camera.near = 1;
+        object.shadow.camera.far = 20;
+
+        // 그림자 맵 해상도 최적화
+        object.shadow.mapSize.width = 2048;
+        object.shadow.mapSize.height = 2048;
+
+        // 그림자 블러 감소 - 더 선명한 그림자
+        object.shadow.radius = 1;
+
+        // 바이어스 값 조정으로 그림자 아티팩트 방지
+        object.shadow.bias = -0.001;
       }
-      return null;
-    }
-  }));
+    });
+  }, [scene]);
 
-  // useCallback을 사용하여 함수 메모이제이션
-  const handleCenterCalculated = useCallback((center) => {
-    setKeyboardCenter(center);
-  }, []);
+  return null;
+};
 
-  return (
-    <Container>
-      <Canvas
-        shadows
-        camera={{
-          position: [0, 7, 12],
-          fov: 40,
-        }}
-      >
-        <ScreenshotHandler ref={screenshotRef}>
-          <ambientLight intensity={0.5} />
-          <directionalLight
-            position={[5, 10, 5]}
-            intensity={1.5}
-            castShadow
-            shadow-mapSize-width={2048}
-            shadow-mapSize-height={2048}
-            shadow-camera-near={0.5}
-            shadow-camera-far={50}
-            shadow-camera-left={-10}
-            shadow-camera-right={10}
-            shadow-camera-top={10}
-            shadow-camera-bottom={-10}
-          />
-          <pointLight position={[-5, 5, 5]} intensity={0.8} castShadow />
+export const ThreeDModel = forwardRef(
+  ({ size, selectedModel, baseColor }, ref) => {
+    const { size: urlSize } = useParams();
+    const keyboardSize = size || urlSize || "100";
+    const validSize = ["60", "80", "100"].includes(keyboardSize)
+      ? keyboardSize
+      : "100";
+    const screenshotRef = useRef();
 
-          {/* 중심점 기준 회전을 위한 커스텀 OrbitControls */}
-          <CenteredOrbitControls target={keyboardCenter} />
-          
-          <Model 
-            size={validSize} 
-            selectedModel={selectedModel} 
-            onCenterCalculated={handleCenterCalculated}
-          />
-        </ScreenshotHandler>
-      </Canvas>
-    </Container>
-  );
-});
+    useImperativeHandle(ref, () => ({
+      getScreenshot: () => {
+        if (screenshotRef.current) {
+          return screenshotRef.current.takeScreenshot();
+        }
+        return null;
+      },
+    }));
+
+    return (
+      <Container>
+        <Canvas
+          shadows
+          camera={{
+            position: [0, 7, 12],
+            fov: 40,
+          }}
+        >
+          <ScreenshotHandler ref={screenshotRef}>
+            <ambientLight intensity={2.2} />
+            <directionalLight
+              position={[0, 20, 0]}
+              intensity={5.0}
+              castShadow
+              shadow-camera-left={-5}
+              shadow-camera-right={5}
+              shadow-camera-top={5}
+              shadow-camera-bottom={-5}
+              //shadow-bias={-0.001}
+            />
+
+            <directionalLight
+              position={[5, 5, 5]}
+              intensity={2.0}
+              castShadow={false}
+            />
+
+            <directionalLight
+              position={[-5, 5, 5]}
+              intensity={2.0}
+              castShadow={false}
+            />
+
+            <directionalLight
+              position={[0, 5, -5]}
+              intensity={1.5}
+              castShadow={false}
+            />
+
+            <SimpleOrbitControls />
+            <Model
+              size={validSize}
+              selectedModel={selectedModel}
+              baseColor={baseColor}
+            />
+          </ScreenshotHandler>
+        </Canvas>
+      </Container>
+    );
+  }
+);
