@@ -6,7 +6,8 @@ import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import { ThreeDModel } from "../../components/model/ThreeDModel";
 import { useAuthStore } from "../../api/useAuthStore";
 import { saveItem } from "../../api/saveItem";
-import { RestartModal } from "../../components/modal/RestartModal";
+import { KeyboardModal } from "../../components/modal/KeyboardModal";
+import { HexColorPicker } from "react-colorful";
 
 const Container = styled.div`
   display: flex;
@@ -75,12 +76,13 @@ const SelectFrame = styled.div`
   left: 30px;
   transform: translateY(-80%);
   width: 280px;
-  height: 280px;
+  height: auto;
   background: white;
   display: flex;
   flex-direction: column;
   border: solid 1px #e6e5e1;
   z-index: 10;
+  padding-bottom: 10px;
 `;
 
 const SelectOption = styled.p`
@@ -195,76 +197,165 @@ const SaveButton = styled.button`
   }
 `;
 
+const ColorPickerContainer = styled.div`
+  padding: 0 10px;
+  margin-top: 10px;
+  display: ${(props) => (props.show ? "block" : "none")};
+`;
+
+const ColorPreview = styled.div`
+  display: flex;
+  align-items: center;
+  padding: 5px 10px;
+  margin-top: 5px;
+`;
+
+const ColorSwatch = styled.div`
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  margin-right: 8px;
+  background-color: ${(props) => props.color};
+  border: 1px solid #ddd;
+`;
+
+const ColorLabel = styled.span`
+  font-size: 14px;
+  color: #666;
+`;
+
 export const CustomPage = () => {
   const { size } = useParams();
   const { user } = useAuthStore();
   const modelRef = useRef();
   const selectedSize = size ? `${size}%` : "Custom Keyboard";
 
-  const [selectedModel, setSelectedModel] = useState(null);
+  const [selectedModel, setSelectedModel] = useState("barebone");
   const [prevSelectedModel, setPrevSelectedModel] = useState(null);
-  const [showModal, setShowModal] = useState(false);
+  
+  // 모달 상태 관리
+  const [restartModalOpen, setRestartModalOpen] = useState(false);
+  const [saveModalOpen, setSaveModalOpen] = useState(false);
   const [modelImage, setModelImage] = useState("");
+  
+  // 색상 상태 추가
+  const [baseColor, setBaseColor] = useState("#ffffff");
+  const [showColorPicker, setShowColorPicker] = useState(false);
 
   const handleModelSelect = (modelType) => {
     setPrevSelectedModel(selectedModel);
-
-    if (selectedModel === modelType) {
-      setSelectedModel(null);
-      setTimeout(() => {
-        setSelectedModel(modelType);
-      }, 10);
+    setSelectedModel(modelType);
+    
+    // 베어본 선택 시 색상 선택기 표시
+    if (modelType === "barebone") {
+      setShowColorPicker(true);
     } else {
-      setSelectedModel(modelType);
+      setShowColorPicker(false);
     }
   };
 
+  // 다시 시작하기 버튼 처리
   const handleRestart = () => {
     if (modelRef.current && modelRef.current.getScreenshot) {
       setModelImage(modelRef.current.getScreenshot());
     } else {
       setModelImage("/images/default-model.png");
     }
-    setShowModal(true);
+    setRestartModalOpen(true);
   };
 
+  // 다시 시작하기 확인 처리
   const handleConfirmRestart = () => {
-    setShowModal(false);
+    setRestartModalOpen(false);
+    // 색상 초기화 추가
+    setBaseColor("#ffffff");
     window.location.reload();
   };
+
+  const handleSaveClick = async () => {
+    if (!user?.email) {
+      alert("로그인이 필요합니다.");
+      return;
+    }
+  
+    let screenshotImage = "";
+    if (modelRef.current && modelRef.current.getScreenshot) {
+      screenshotImage = modelRef.current.getScreenshot();
+      setModelImage(screenshotImage);
+      console.log("스크린샷 이미지 Base64:", screenshotImage); // ← 이 부분 추가
+    } else {
+      alert("이미지 생성에 실패했습니다. 다시 시도해주세요.");
+      return;
+    }
+  
+    setSaveModalOpen(true);
+  };
+  
+  const handleConfirmSave = async () => {
+    setSaveModalOpen(false);
+  
+    // FormData 객체 생성
+    const formData = new FormData();
+    
+    // JSON 데이터 생성
+    const jsonData = {
+      email: user.email,
+      barebonecolor: baseColor,
+      keyboardtype: size,
+      keycapcolor: "test",
+      design: "test",
+      switchcolor: "test"
+    };
+    
+    // FormData에 JSON 추가
+    formData.append('DTO', new Blob([JSON.stringify(jsonData)], {
+      type: 'application/json'
+    }));
+    
+    // Base64 이미지를 파일로 변환
+    if (modelImage) {
+      // Base64 데이터에서 실제 바이너리 데이터 추출 (data:image/png;base64, 부분 제거)
+      const imageData = modelImage.split(',')[1];
+      const byteCharacters = atob(imageData);
+      const byteArrays = [];
+      
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteArrays.push(byteCharacters.charCodeAt(i));
+      }
+      
+      const byteArray = new Uint8Array(byteArrays);
+      const blob = new Blob([byteArray], { type: 'image/png' });
+      
+      // 파일 이름 생성 (현재 시간 기준)
+      const fileName = `keyboard_${new Date().getTime()}.png`;
+      const file = new File([blob], fileName, { type: 'image/png' });
+      
+      // FormData에 파일 추가
+      formData.append('file', file);
+    }
+  
+    try {
+      // saveItem 함수 수정 필요 - FormData를 전송할 수 있도록
+      const result = await saveItem(formData);
+  
+      if (result.success) {
+        alert("저장이 완료되었습니다.");
+      } else {
+        console.error("저장 실패:", result.error);
+        alert(`저장 중 오류가 발생했습니다: ${result.message}`);
+      }
+    } catch (error) {
+      console.error("저장 중 예외 발생:", error);
+      alert("저장 중 오류가 발생했습니다.");
+    }
+  };
+  
 
   useEffect(() => {
     if (selectedModel) {
       console.log(`선택된 모델: ${selectedModel}, 사이즈: ${size}`);
     }
   }, [selectedModel, size]);
-
-  const handleSave = async () => {
-    if (!user?.email) {
-      alert("로그인이 필요합니다.");
-      return;
-    }
-
-    const userData = {
-      email: user.email,
-      barebonecolor: "test",
-      keyboardtype: size,
-      keycapcolor: "test",
-      design: "test",
-      switchcolor: "test",
-      imageurl: "test"
-    };
-
-    const result = await saveItem(userData);
-
-    if (result.success) {
-      console.log("저장 성공:", result.data);
-      alert("저장이 완료되었습니다.");
-    } else {
-      console.error("저장 실패:", result.error);
-      alert(`저장 중 오류가 발생했습니다: ${result.message}`);
-    }
-  };
 
   return (
     <Container>
@@ -284,7 +375,7 @@ export const CustomPage = () => {
             <FiShare2 />
             공유하기
           </IconButton>
-          <SaveButton onClick={handleSave}>
+          <SaveButton onClick={handleSaveClick}>
             <FiSave />
             저장하기
           </SaveButton>
@@ -293,7 +384,12 @@ export const CustomPage = () => {
 
       <CustomFrame>
         <SelectFrame>
-          <SelectOption>베어본</SelectOption>
+          <SelectOption 
+            selected={selectedModel === "barebone"}
+            onClick={() => handleModelSelect("barebone")}
+          >
+            베어본
+          </SelectOption>
           <SelectOption
             selected={selectedModel === "switch"}
             onClick={() => handleModelSelect("switch")}
@@ -306,6 +402,15 @@ export const CustomPage = () => {
           >
             키캡
           </SelectOption>
+          
+          {/* 색상 피커 컴포넌트 추가 */}
+          <ColorPickerContainer show={showColorPicker}>
+            <HexColorPicker color={baseColor} onChange={setBaseColor} />
+            <ColorPreview>
+              <ColorSwatch color={baseColor} />
+              <ColorLabel>베어본 색상: {baseColor}</ColorLabel>
+            </ColorPreview>
+          </ColorPickerContainer>
         </SelectFrame>
 
         <PaginationFrame>
@@ -326,17 +431,32 @@ export const CustomPage = () => {
         <ThreeDModel
           ref={modelRef}
           size={size}
-          selectedModel={selectedModel}
+          selectedModel={selectedModel === "barebone" ? null : selectedModel}
           prevSelectedModel={prevSelectedModel}
+          baseColor={baseColor} // 색상 전달
         />
       </CustomFrame>
 
-      <RestartModal
-        isOpen={showModal}
-        onClose={() => setShowModal(false)}
+      {/* 다시 시작하기 모달 */}
+      <KeyboardModal
+        isOpen={restartModalOpen}
+        onClose={() => setRestartModalOpen(false)}
         onConfirm={handleConfirmRestart}
         imageSrc={modelImage}
         message="작업하신 디자인을 지우고 다시 시작하시겠습니까? 디자인을 저장하시면 나중에 이어서 디자인할 수 있습니다."
+        confirmText="다시 시작하기"
+        cancelText="취소"
+      />
+
+      {/* 저장하기 모달 */}
+      <KeyboardModal
+        isOpen={saveModalOpen}
+        onClose={() => setSaveModalOpen(false)}
+        onConfirm={handleConfirmSave}
+        imageSrc={modelImage}
+        message="현재 디자인을 저장하시겠습니까?"
+        confirmText="저장하기"
+        cancelText="취소"
       />
     </Container>
   );

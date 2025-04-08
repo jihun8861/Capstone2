@@ -103,30 +103,39 @@ const ButtonHalf = styled.button`
   }
 `;
 
-export const RestartModal = ({ isOpen, onClose, onConfirm, imageSrc, message }) => {
+export const KeyboardModal = ({ 
+  isOpen,
+  onClose, 
+  onConfirm, 
+  imageSrc, 
+  message, 
+  confirmText = "확인", 
+  cancelText = "취소",
+  title = "/images/custom.png"
+}) => {
   if (!isOpen) return null;
 
   return (
     <ModalOverlay>
       <ModalContainer>
         <ModalHeader>
-          <ModalTitle src="/images/custom.png" />
+          <ModalTitle src={title} alt="키보드 커스텀" />
           <CloseButton onClick={onClose}>
             <FiX />
           </CloseButton>
         </ModalHeader>
         <ModalContent>
           <ModelImageContainer>
-            <ModelImage src={imageSrc} alt="현재 키보드 모델" />
+            <ModelImage src={imageSrc} alt="미리보기 이미지" />
           </ModelImageContainer>
           <MessageText>{message}</MessageText>
         </ModalContent>
         <ButtonContainer>
           <ButtonHalf className="cancel" onClick={onClose}>
-            취소
+            {cancelText}
           </ButtonHalf>
           <ButtonHalf className="confirm" onClick={onConfirm}>
-            다시 시작하기
+            {confirmText}
           </ButtonHalf>
         </ButtonContainer>
       </ModalContainer>
