@@ -1,5 +1,7 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import styled from "styled-components";
+import { useAuthStore } from "../../api/useAuthStore";
+import axios from "axios";
 
 const Container = styled.div`
   display: flex;
@@ -155,9 +157,25 @@ const VerticalScroll = styled.div`
 
 const KeyboardGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 20px;
   width: 100%;
+
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (min-width: 992px) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  @media (min-width: 1200px) {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  @media (min-width: 1400px) {
+    grid-template-columns: repeat(5, 1fr);
+  }
 `;
 
 const KeyboardCard = styled.div`
@@ -208,6 +226,40 @@ const KeyboardDate = styled.div`
   color: #888;
 `;
 
+const KeyboardDetails = styled.div`
+  font-size: 12px;
+  color: #666;
+  margin-top: 5px;
+`;
+
+const LoadingState = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  width: 100%;
+  max-width: 600px;
+  text-align: center;
+  margin-top: 180px;
+`;
+
+const ErrorState = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  background-color: #fff0f0;
+  border-radius: 8px;
+  width: 100%;
+  max-width: 600px;
+  text-align: center;
+  margin-top: 180px;
+`;
+
 const EmptyState = styled.div`
   display: flex;
   flex-direction: column;
@@ -241,22 +293,69 @@ const ArrowIcon = ({ direction }) => (
   </svg>
 );
 
-const mockKeyboards = [
-  { id: 1, name: "닉네임", date: "2025-03-01", image: null },
-  { id: 2, name: "김호연", date: "2025-03-28", image: null },
-  { id: 3, name: "현지훈", date: "2025-03-25", image: null },
-  { id: 4, name: "조우주", date: "2025-03-20", image: null },
-  { id: 5, name: "염정규", date: "2025-03-18", image: null },
-];
+const formatDate = (dateString) => {
+  const date = new Date(dateString);
+  return date.toLocaleDateString("ko-KR", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+};
 
 const MyCustomKeyboard = () => {
   const [viewMode, setViewMode] = useState("vertical");
+  const [keyboards, setKeyboards] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const horizontalScrollRef = useRef(null);
-  const hasKeyboards = mockKeyboards.length > 0;
+
+  const { user } = useAuthStore();
+  const userEmail = user?.email || "";
+
+  useEffect(() => {
+    const fetchKeyboards = async () => {
+      if (!userEmail) {
+        setLoading(false);
+        setError("로그인이 필요합니다.");
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const response = await axios.post(
+          "https://port-0-edcustom-lxx6l4ha4fc09fa0.sel5.cloudtype.app/items/find",
+          { email: userEmail },
+          {
+            headers: {
+              "Content-Type": "application/json;charset=UTF-8",
+            },
+          }
+        );
+
+        if (
+          response.data &&
+          response.data.status === "OK" &&
+          Array.isArray(response.data.data)
+        ) {
+          setKeyboards(response.data.data);
+        } else {
+          throw new Error("응답 형식이 올바르지 않습니다");
+        }
+      } catch (err) {
+        console.error("키보드 목록 불러오기 오류:", err);
+        console.log(userEmail);
+        setError("키보드 목록을 불러오는 데 실패했습니다. 다시 시도해 주세요.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchKeyboards();
+  }, [userEmail]);
 
   const scroll = (direction) => {
     if (horizontalScrollRef.current) {
-      const scrollAmount = 1200;
+      const scrollAmount = 300;
       const currentScroll = horizontalScrollRef.current.scrollLeft;
 
       horizontalScrollRef.current.scrollLeft =
@@ -265,6 +364,49 @@ const MyCustomKeyboard = () => {
           : currentScroll + scrollAmount;
     }
   };
+
+  const getKeyboardName = (keyboard, index) => {
+    return keyboard.keyboardtype && keyboard.keyboardtype !== "string"
+      ? keyboard.keyboardtype
+      : `커스텀 키보드 ${index + 1}`;
+  };
+
+  if (!userEmail) {
+    return (
+      <Container>
+        <Title>나의 커스텀 키보드</Title>
+        <ErrorState>
+          <h3>로그인이 필요합니다</h3>
+          <p>키보드 목록을 보려면 로그인해 주세요.</p>
+        </ErrorState>
+      </Container>
+    );
+  }
+
+  if (loading) {
+    return (
+      <Container>
+        <Title>나의 커스텀 키보드</Title>
+        <LoadingState>
+          <h3>키보드 목록을 불러오는 중입니다...</h3>
+        </LoadingState>
+      </Container>
+    );
+  }
+
+  if (error) {
+    return (
+      <Container>
+        <Title>나의 커스텀 키보드</Title>
+        <ErrorState>
+          <h3>오류가 발생했습니다</h3>
+          <p>{error}</p>
+        </ErrorState>
+      </Container>
+    );
+  }
+
+  const hasKeyboards = keyboards.length > 0;
 
   return (
     <Container>
@@ -277,7 +419,7 @@ const MyCustomKeyboard = () => {
             active={viewMode === "vertical"}
             onClick={() => setViewMode("vertical")}
           >
-            세로 스크롤 (가로 5개)
+            세로 스크롤
           </ToggleButton>
           <ToggleButton
             active={viewMode === "horizontal"}
@@ -292,18 +434,30 @@ const MyCustomKeyboard = () => {
         viewMode === "vertical" ? (
           <VerticalScroll>
             <KeyboardGrid>
-              {mockKeyboards.map((keyboard) => (
+              {keyboards.map((keyboard, index) => (
                 <KeyboardCard key={keyboard.id}>
-                  <KeyboardImage image={keyboard.image}>
-                    {!keyboard.image && (
+                  <KeyboardImage image={keyboard.imageUrl}>
+                    {!keyboard.imageUrl && (
                       <KeyboardImagePlaceholder>
                         키보드 이미지
                       </KeyboardImagePlaceholder>
                     )}
                   </KeyboardImage>
                   <KeyboardInfo>
-                    <KeyboardName>{keyboard.name}</KeyboardName>
-                    <KeyboardDate>생성일: {keyboard.date}</KeyboardDate>
+                    <KeyboardName>
+                      {getKeyboardName(keyboard, index)}
+                    </KeyboardName>
+                    <KeyboardDate>
+                      생성일: {formatDate(keyboard.createdAt)}
+                    </KeyboardDate>
+                    <KeyboardDetails>
+                      {keyboard.barebonecolor !== "string" &&
+                        `바디: ${keyboard.barebonecolor} • `}
+                      {keyboard.keycapcolor !== "string" &&
+                        `키캡: ${keyboard.keycapcolor} • `}
+                      {keyboard.switchcolor !== "string" &&
+                        `스위치: ${keyboard.switchcolor}`}
+                    </KeyboardDetails>
                   </KeyboardInfo>
                 </KeyboardCard>
               ))}
@@ -316,18 +470,30 @@ const MyCustomKeyboard = () => {
             </LeftArrow>
 
             <HorizontalScroll ref={horizontalScrollRef}>
-              {mockKeyboards.map((keyboard) => (
+              {keyboards.map((keyboard, index) => (
                 <HorizontalKeyboardCard key={keyboard.id}>
-                  <KeyboardImage image={keyboard.image}>
-                    {!keyboard.image && (
+                  <KeyboardImage image={keyboard.imageUrl}>
+                    {!keyboard.imageUrl && (
                       <KeyboardImagePlaceholder>
                         키보드 이미지
                       </KeyboardImagePlaceholder>
                     )}
                   </KeyboardImage>
                   <KeyboardInfo>
-                    <KeyboardName>{keyboard.name}</KeyboardName>
-                    <KeyboardDate>생성일: {keyboard.date}</KeyboardDate>
+                    <KeyboardName>
+                      {getKeyboardName(keyboard, index)}
+                    </KeyboardName>
+                    <KeyboardDate>
+                      생성일: {formatDate(keyboard.createdAt)}
+                    </KeyboardDate>
+                    <KeyboardDetails>
+                      {keyboard.barebonecolor !== "string" &&
+                        `바디: ${keyboard.barebonecolor} • `}
+                      {keyboard.keycapcolor !== "string" &&
+                        `키캡: ${keyboard.keycapcolor} • `}
+                      {keyboard.switchcolor !== "string" &&
+                        `스위치: ${keyboard.switchcolor}`}
+                    </KeyboardDetails>
                   </KeyboardInfo>
                 </HorizontalKeyboardCard>
               ))}

@@ -17,10 +17,12 @@ const Container = styled.div`
 const Sidebar = styled.div`
   width: 220px;
   border-right: 1px solid #ddd;
+  padding-top: 120px;
 `;
 
 const MenuItem = styled.div`
   padding: 30px 20px;
+  margin-top: 30px;
   cursor: pointer;
   font-size: 18px;
   font-weight: ${(props) => (props.$isActive ? "bold" : "normal")};

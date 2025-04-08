@@ -45,3 +45,4 @@ export const useAuthStore = create((set) => ({
 }));
 
 useAuthStore.getState().fetchUserData();
+
