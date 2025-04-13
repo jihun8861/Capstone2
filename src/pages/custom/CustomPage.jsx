@@ -60,6 +60,24 @@ const RightSection = styled.div`
   align-items: center;
 `;
 
+const SelectContainer = styled.div`
+  display: flex;
+  width: 20%;
+  height: 100%;
+  border: solid 1px;
+`
+
+const ThreeDContainer = styled.div`
+  display: flex;
+  width: 80%;
+  height: 100%;
+  border: solid 1px;
+  position: relative;
+  overflow: hidden;
+  justify-content: center;
+  align-items: center;
+`;
+
 const CustomFrame = styled.div`
   position: relative;
   width: 100%;
@@ -112,64 +130,6 @@ const IconButton = styled.button`
 
   svg {
     font-size: 18px;
-  }
-`;
-
-const PaginationFrame = styled.div`
-  position: absolute;
-  min-width: 280px;
-  max-width: 400px;
-  width: auto;
-  left: 30px;
-  bottom: 180px;
-  background-color: transparent;
-  border: 2px solid #e1e1e1;
-  display: flex;
-  z-index: 10;
-`;
-
-const PageInfoContainer = styled.div`
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-`;
-
-const PageCount = styled.div`
-  padding: 8px 12px 0;
-  font-size: 16px;
-  color: #777;
-`;
-
-const PageTitle = styled.div`
-  padding: 0 12px 8px;
-  font-size: 21px;
-  font-weight: bold;
-  color: #333;
-  white-space: nowrap;
-`;
-
-const NavButtonContainer = styled.div`
-  display: flex;
-  border-left: 1px solid #e6e5e1;
-  flex-shrink: 0;
-`;
-
-const NavButton = styled.button`
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #555;
-  font-size: 21px;
-  width: 50px;
-  flex-shrink: 0;
-
-  &:first-child {
-    border-right: 2px solid #e1e1e1;
   }
 `;
 
@@ -383,6 +343,7 @@ export const CustomPage = () => {
       </HeaderFrame>
 
       <CustomFrame>
+        <SelectContainer>
         <SelectFrame>
           <SelectOption 
             selected={selectedModel === "barebone"}
@@ -412,22 +373,9 @@ export const CustomPage = () => {
             </ColorPreview>
           </ColorPickerContainer>
         </SelectFrame>
+        </SelectContainer>
 
-        <PaginationFrame>
-          <PageInfoContainer>
-            <PageCount>1/3</PageCount>
-            <PageTitle>베어본 (BAREBONE)</PageTitle>
-          </PageInfoContainer>
-          <NavButtonContainer>
-            <NavButton>
-              <FiChevronLeft />
-            </NavButton>
-            <NavButton>
-              <FiChevronRight />
-            </NavButton>
-          </NavButtonContainer>
-        </PaginationFrame>
-
+        <ThreeDContainer>
         <ThreeDModel
           ref={modelRef}
           size={size}
@@ -435,6 +383,7 @@ export const CustomPage = () => {
           prevSelectedModel={prevSelectedModel}
           baseColor={baseColor} // 색상 전달
         />
+        </ThreeDContainer>
       </CustomFrame>
 
       {/* 다시 시작하기 모달 */}

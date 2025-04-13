@@ -12,6 +12,9 @@ import { useParams } from "react-router-dom";
 import { OrbitControls, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 
+// 기존 코드 부분 유지...
+// Container, KEYBOARD_CENTER_OFFSETS, KEYBOARD_CAMERA_SETTINGS 등 기존 코드는 그대로 유지
+
 const Container = styled.div`
   width: 100%;
   height: 100%;
@@ -19,6 +22,20 @@ const Container = styled.div`
   justify-content: center;
   align-items: center;
 `;
+
+// 키보드 크기별 중심점 오프셋 정의
+const KEYBOARD_CENTER_OFFSETS = {
+  "60": { x: -0.9, y: 0, z: 0 },
+  "80": { x: -1.2, y: 0, z: 0 },
+  "100": { x: -1.5, y: 0, z: 0 },
+};
+
+// 키보드 크기별 카메라 설정
+const KEYBOARD_CAMERA_SETTINGS = {
+  "60": { position: [0, 7, 10], target: [0, 0, 0] },
+  "80": { position: [0, 7, 12], target: [0, 0, 0] },
+  "100": { position: [0, 7, 14], target: [0, 0, 0] },
+};
 
 const KeyboardPart = ({
   modelPath,
@@ -29,29 +46,26 @@ const KeyboardPart = ({
   size,
   visible = true,
   color = null,
+  centerOffset,
 }) => {
+  // KeyboardPart 컴포넌트 코드는 그대로 유지
   const { scene } = useGLTF(modelPath);
   const modelRef = useRef();
   const isTopCase = modelPath.includes("5.TopCase.glb");
+  const isTopSwitch = modelPath.includes("TopSwitchs.glb");
 
   useEffect(() => {
     scene.traverse((child) => {
       if (child.isMesh) {
-        // 모든 메시에 대해 그림자를 받을 수 있게 하되
-        // 측면과 뒤쪽 그림자를 제거하기 위해 조명 설정으로 제어
         child.receiveShadow = true;
-
-        // 그림자 캐스팅은 일부 부품만 수행
-        // 상단 케이스는 그림자를 드리우지 않음
+  
         if (isTopCase) {
           child.castShadow = false;
         } else {
-          // 나머지 부품은 위에서 아래로만 그림자를 드리우도록 설정
           child.castShadow = true;
         }
-
-        // 색상 적용 (기존과 동일)
-        if (isTopCase && color) {
+  
+        if ((isTopCase || isTopSwitch) && color) {
           const originalMaterial = child.material;
           const newMaterial = new THREE.MeshStandardMaterial({
             color: new THREE.Color(color),
@@ -62,7 +76,16 @@ const KeyboardPart = ({
         }
       }
     });
-  }, [scene, color, isTopCase]);
+  
+    // 💡 중심점 계산
+    const box = new THREE.Box3().setFromObject(scene);
+    const center = new THREE.Vector3();
+    box.getCenter(center);
+  
+    // 💡 중심점을 원점으로 맞추기
+    scene.position.sub(center);
+  }, [scene, color, isTopCase, isTopSwitch]);
+  
 
   useFrame(() => {
     if (modelRef.current) {
@@ -78,21 +101,24 @@ const KeyboardPart = ({
           index
         );
 
+        // 중심점 오프셋 적용
         modelRef.current.position.x = THREE.MathUtils.lerp(
           initialPos[0],
           finalPos[0],
           animationProgress
-        );
+        ) + centerOffset.x;
+        
         modelRef.current.position.y = THREE.MathUtils.lerp(
           initialPos[1],
           finalPos[1],
           animationProgress
-        );
+        ) + centerOffset.y;
+        
         modelRef.current.position.z = THREE.MathUtils.lerp(
           initialPos[2],
           finalPos[2],
           animationProgress
-        );
+        ) + centerOffset.z;
       } else {
         const initialPos = KEYBOARD_POSITIONS.getInitialPosition(
           size,
@@ -100,13 +126,14 @@ const KeyboardPart = ({
         );
         const finalPos = KEYBOARD_POSITIONS.getFinalPosition(size, partType);
 
-        modelRef.current.position.x = initialPos[0];
+        // 중심점 오프셋 적용
+        modelRef.current.position.x = initialPos[0] + centerOffset.x;
         modelRef.current.position.y = THREE.MathUtils.lerp(
           initialPos[1],
           finalPos[1],
           animationProgress
-        );
-        modelRef.current.position.z = initialPos[2];
+        ) + centerOffset.y;
+        modelRef.current.position.z = initialPos[2] + centerOffset.z;
       }
     }
   });
@@ -117,16 +144,13 @@ const KeyboardPart = ({
 };
 
 const ScreenshotHandler = forwardRef(({ children }, ref) => {
+  // ScreenshotHandler 컴포넌트 코드는 그대로 유지
   const { gl, scene, camera } = useThree();
 
   useImperativeHandle(ref, () => ({
     takeScreenshot: () => {
       const originalPosition = camera.position.clone();
       const originalRotation = camera.rotation.clone();
-
-      camera.position.set(0, 9, 12);
-      camera.lookAt(new THREE.Vector3(0, 0, 0));
-      gl.render(scene, camera);
 
       const dataURL = gl.domElement.toDataURL("image/png");
 
@@ -141,10 +165,41 @@ const ScreenshotHandler = forwardRef(({ children }, ref) => {
   return <>{children}</>;
 });
 
-// 기본 OrbitControls 컴포넌트로 대체
-const SimpleOrbitControls = () => {
+const KeyboardOrbitControls = ({ resetCamera, cameraSettings }) => {
+  const controls = useRef();
+  const { camera } = useThree();
+
+  // 카메라 리셋 기능 추가
+  useEffect(() => {
+    if (resetCamera && controls.current) {
+      // 카메라 위치 초기화
+      if (cameraSettings && cameraSettings.position) {
+        camera.position.set(...cameraSettings.position);
+      } else {
+        camera.position.set(0, 7, 12);
+      }
+      
+      // 카메라 타겟 초기화
+      if (cameraSettings && cameraSettings.target) {
+        controls.current.target.set(...cameraSettings.target);
+      } else {
+        controls.current.target.set(0, 0, 0);
+      }
+      
+      controls.current.update();
+    }
+  }, [resetCamera, cameraSettings, camera]);
+
+  useEffect(() => {
+    if (controls.current) {
+      controls.current.target.set(0, 0, 0);
+      controls.current.update();
+    }
+  }, []);
+
   return (
     <OrbitControls
+      ref={controls}
       enableZoom={true}
       minDistance={6}
       maxDistance={20}
@@ -155,7 +210,7 @@ const SimpleOrbitControls = () => {
   );
 };
 
-const Model = ({ size, selectedModel, baseColor }) => {
+const Model = ({ size, selectedModel, baseColor, switchColor, resetStatus }) => {
   const [baseAnimationProgress, setBaseAnimationProgress] = useState(0);
   const [switchAnimationProgress, setSwitchAnimationProgress] = useState(0);
   const [keycapAnimationProgress, setKeycapAnimationProgress] = useState(0);
@@ -163,11 +218,39 @@ const Model = ({ size, selectedModel, baseColor }) => {
   const [showKeycap, setShowKeycap] = useState(false);
   const groupRef = useRef();
   const scale = KEYBOARD_POSITIONS.getScale(size);
+  
+  // 키보드 사이즈에 따른 중심점 오프셋
+  const centerOffset = KEYBOARD_CENTER_OFFSETS[size] || KEYBOARD_CENTER_OFFSETS["100"];
 
   const baseAnimationExecuted = useRef(false);
   const switchAnimationExecuted = useRef({});
   const keycapAnimationExecuted = useRef({});
 
+  // 다시 시작하기 효과를 위한 리셋 함수
+  useEffect(() => {
+    if (resetStatus) {
+      // 모든 애니메이션 상태 초기화
+      baseAnimationExecuted.current = false;
+      switchAnimationExecuted.current = {};
+      keycapAnimationExecuted.current = {};
+      
+      // 애니메이션 진행률 초기화
+      setBaseAnimationProgress(0);
+      setSwitchAnimationProgress(0);
+      setKeycapAnimationProgress(0);
+      
+      // 스위치와 키캡 표시 상태 초기화
+      setShowSwitch(false);
+      setShowKeycap(false);
+
+      // 애니메이션 다시 시작
+      setTimeout(() => {
+        animateBaseParts();
+      }, 500);
+    }
+  }, [resetStatus]);
+
+  // 사이즈 변경 시 상태 초기화
   useEffect(() => {
     baseAnimationExecuted.current = false;
     switchAnimationExecuted.current = {};
@@ -179,6 +262,31 @@ const Model = ({ size, selectedModel, baseColor }) => {
     setShowKeycap(false);
   }, [size]);
 
+  // 기본 파트 애니메이션 함수
+  const animateBaseParts = () => {
+    baseAnimationExecuted.current = true;
+    const duration = 2000;
+    const startTime = Date.now();
+
+    const updateAnimation = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      setBaseAnimationProgress(progress);
+
+      if (progress < 1) {
+        requestAnimationFrame(updateAnimation);
+      }
+    };
+
+    requestAnimationFrame(updateAnimation);
+  };
+
+  useEffect(() => {
+    if (baseAnimationExecuted.current) return;
+    const timer = setTimeout(animateBaseParts, 500);
+    return () => clearTimeout(timer);
+  }, [size]);
+
   const BASE_MODEL_PATHS = [
     `/keyboard/${size}keyboard/1.BottomCase.glb`,
     `/keyboard/${size}keyboard/2.PCB.glb`,
@@ -188,33 +296,9 @@ const Model = ({ size, selectedModel, baseColor }) => {
     `/keyboard/${size}keyboard/6.Stabilizers.glb`,
   ];
 
-  const SWITCH_MODEL_PATH = `/keyboard/${size}keyboard/${size}Switchs.glb`;
+  const BOTTOM_SWITCH_MODEL_PATH = `/keyboard/${size}keyboard/${size}BottomSwitchs.glb`;
+  const TOP_SWITCH_MODEL_PATH = `/keyboard/${size}keyboard/${size}TopSwitchs.glb`;
   const KEYCAP_MODEL_PATH = `/keyboard/${size}keyboard/${size}Keycaps.glb`;
-
-  useEffect(() => {
-    if (baseAnimationExecuted.current) return;
-
-    const animateBaseParts = () => {
-      baseAnimationExecuted.current = true;
-      const duration = 2000;
-      const startTime = Date.now();
-
-      const updateAnimation = () => {
-        const elapsed = Date.now() - startTime;
-        const progress = Math.min(elapsed / duration, 1);
-        setBaseAnimationProgress(progress);
-
-        if (progress < 1) {
-          requestAnimationFrame(updateAnimation);
-        }
-      };
-
-      requestAnimationFrame(updateAnimation);
-    };
-
-    const timer = setTimeout(animateBaseParts, 500);
-    return () => clearTimeout(timer);
-  }, [size]);
 
   useEffect(() => {
     if (selectedModel === "switch" && !showSwitch) {
@@ -269,7 +353,7 @@ const Model = ({ size, selectedModel, baseColor }) => {
   }, [selectedModel, size, showSwitch, showKeycap]);
 
   return (
-    <group ref={groupRef}>
+    <group ref={groupRef} position={[0, 0, 0]}>
       {BASE_MODEL_PATHS.map((path, index) => (
         <KeyboardPart
           key={`base-${index}`}
@@ -280,18 +364,32 @@ const Model = ({ size, selectedModel, baseColor }) => {
           partType="base"
           size={size}
           color={path.includes("5.TopCase.glb") ? baseColor : null}
+          centerOffset={centerOffset}
         />
       ))}
 
       {showSwitch && (
-        <KeyboardPart
-          key="switches"
-          modelPath={SWITCH_MODEL_PATH}
-          animationProgress={switchAnimationProgress}
-          scale={scale}
-          partType="switch"
-          size={size}
-        />
+        <>
+          <KeyboardPart
+            key="bottom-switches"
+            modelPath={BOTTOM_SWITCH_MODEL_PATH}
+            animationProgress={switchAnimationProgress}
+            scale={scale}
+            partType="switch"
+            size={size}
+            centerOffset={centerOffset}
+          />
+          <KeyboardPart
+            key="top-switches"
+            modelPath={TOP_SWITCH_MODEL_PATH}
+            animationProgress={switchAnimationProgress}
+            scale={scale}
+            partType="switch"
+            size={size}
+            color={switchColor}
+            centerOffset={centerOffset}
+          />
+        </>
       )}
 
       {showKeycap && (
@@ -302,32 +400,24 @@ const Model = ({ size, selectedModel, baseColor }) => {
           scale={scale}
           partType="keycap"
           size={size}
+          centerOffset={centerOffset}
         />
       )}
     </group>
   );
 };
 
-// 추가: 그림자 제한 영역 헬퍼 함수 컴포넌트
 const ShadowLimiter = () => {
   const { scene } = useThree();
 
   useEffect(() => {
-    // Three.js에서 제공하는 모든 조명에 그림자 제한 설정
     scene.traverse((object) => {
       if (object.isLight && object.shadow) {
-        // 그림자 방향 제한 - 거의 수직 방향으로만 그림자가 생성되도록 설정
         object.shadow.camera.near = 1;
         object.shadow.camera.far = 20;
-
-        // 그림자 맵 해상도 최적화
         object.shadow.mapSize.width = 2048;
         object.shadow.mapSize.height = 2048;
-
-        // 그림자 블러 감소 - 더 선명한 그림자
         object.shadow.radius = 1;
-
-        // 바이어스 값 조정으로 그림자 아티팩트 방지
         object.shadow.bias = -0.001;
       }
     });
@@ -337,13 +427,26 @@ const ShadowLimiter = () => {
 };
 
 export const ThreeDModel = forwardRef(
-  ({ size, selectedModel, baseColor }, ref) => {
+  ({ size, selectedModel, baseColor, switchColor }, ref) => {
     const { size: urlSize } = useParams();
     const keyboardSize = size || urlSize || "100";
     const validSize = ["60", "80", "100"].includes(keyboardSize)
       ? keyboardSize
       : "100";
     const screenshotRef = useRef();
+    const [resetStatus, setResetStatus] = useState(false);
+    const [resetCamera, setResetCamera] = useState(false);
+
+    // 리셋 함수 구현
+    const resetKeyboardModel = () => {
+      setResetStatus(prev => !prev); // 토글하여 useEffect 트리거
+      setResetCamera(true);
+      
+      // 카메라 리셋 후 상태 복원
+      setTimeout(() => {
+        setResetCamera(false);
+      }, 100);
+    };
 
     useImperativeHandle(ref, () => ({
       getScreenshot: () => {
@@ -352,18 +455,23 @@ export const ThreeDModel = forwardRef(
         }
         return null;
       },
+      // 다시 시작하기 기능 추가
+      resetModel: resetKeyboardModel
     }));
+
+    // 선택된 키보드 크기에 맞는 카메라 설정
+    const cameraSettings = KEYBOARD_CAMERA_SETTINGS[validSize] || KEYBOARD_CAMERA_SETTINGS["100"];
 
     return (
       <Container>
         <Canvas
           shadows
           camera={{
-            position: [0, 7, 12],
+            position: cameraSettings.position,
             fov: 40,
           }}
         >
-          <ScreenshotHandler ref={screenshotRef}>
+          <ScreenshotHandler ref={screenshotRef} size={validSize}>
             <ambientLight intensity={2.2} />
             <directionalLight
               position={[0, 20, 0]}
@@ -373,7 +481,7 @@ export const ThreeDModel = forwardRef(
               shadow-camera-right={5}
               shadow-camera-top={5}
               shadow-camera-bottom={-5}
-              //shadow-bias={-0.001}
+              shadow-bias={-0.001}
             />
 
             <directionalLight
@@ -394,11 +502,18 @@ export const ThreeDModel = forwardRef(
               castShadow={false}
             />
 
-            <SimpleOrbitControls />
+            <KeyboardOrbitControls 
+              size={validSize} 
+              resetCamera={resetCamera}
+              cameraSettings={cameraSettings}
+            />
+            <ShadowLimiter />
             <Model
               size={validSize}
               selectedModel={selectedModel}
               baseColor={baseColor}
+              switchColor={switchColor}
+              resetStatus={resetStatus}
             />
           </ScreenshotHandler>
         </Canvas>
