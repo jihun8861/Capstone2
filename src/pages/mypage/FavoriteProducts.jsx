@@ -1,5 +1,7 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import styled from "styled-components";
+import { useAuthStore } from "../../api/useAuthStore";
+import axios from "axios";
 
 const Container = styled.div`
   display: flex;
@@ -20,115 +22,6 @@ const Description = styled.p`
   color: #666;
   font-size: 16px;
   margin-bottom: 20px;
-`;
-
-const ViewToggle = styled.div`
-  display: flex;
-  margin-bottom: 20px;
-`;
-
-const ToggleButton = styled.button`
-  padding: 8px 16px;
-  background-color: ${(props) => (props.active ? "#4a90e2" : "#f0f0f0")};
-  color: ${(props) => (props.active ? "white" : "#333")};
-  border: none;
-  margin-right: 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-
-  &:hover {
-    background-color: ${(props) => (props.active ? "#3a7bc8" : "#e0e0e0")};
-  }
-`;
-
-const HorizontalScrollContainer = styled.div`
-  position: relative;
-  width: 100%;
-  max-width: 1200px;
-`;
-
-const HorizontalScroll = styled.div`
-  display: flex;
-  width: 100%;
-  overflow-x: auto;
-  padding-bottom: 15px;
-  scrollbar-width: thin;
-  scroll-behavior: smooth;
-
-  &::-webkit-scrollbar {
-    height: 8px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 4px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
-    border-radius: 4px;
-  }
-`;
-
-const ArrowButton = styled.button`
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background-color: rgba(255, 255, 255, 0.8);
-  border: 1px solid #ddd;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  z-index: 10;
-  transition: all 0.2s;
-
-  &:hover {
-    background-color: rgba(255, 255, 255, 1);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  &:focus {
-    outline: none;
-  }
-`;
-
-const LeftArrow = styled(ArrowButton)`
-  left: -18px;
-`;
-const RightArrow = styled(ArrowButton)`
-  right: -18px;
-`;
-
-const HorizontalKeyboardCard = styled.div`
-  flex: 0 0 auto;
-  width: 280px;
-  margin-right: 20px;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s, box-shadow 0.2s;
-  cursor: pointer;
-  position: relative;
-
-  &:last-child {
-    margin-right: 0;
-  }
-
-  &:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
-  }
 `;
 
 const VerticalScroll = styled.div`
@@ -246,6 +139,20 @@ const LoadingState = styled.div`
   margin-top: 180px;
 `;
 
+const ErrorState = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  background-color: #fff0f0;
+  border-radius: 8px;
+  width: 100%;
+  max-width: 600px;
+  text-align: center;
+  margin-top: 180px;
+`;
+
 const LikesBadge = styled.div`
   position: absolute;
   top: 10px;
@@ -274,25 +181,6 @@ const LikeIcon = () => (
   </svg>
 );
 
-const ArrowIcon = ({ direction }) => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 16 16"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    style={{ transform: direction === "left" ? "rotate(180deg)" : "none" }}
-  >
-    <path
-      d="M5.5 3L10.5 8L5.5 13"
-      stroke="#333"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
-
 const formatDate = (dateString) => {
   const date = new Date(dateString);
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
@@ -302,38 +190,44 @@ const formatDate = (dateString) => {
 };
 
 const FavoriteProducts = () => {
-  const [viewMode, setViewMode] = useState("vertical");
   const [keyboards, setKeyboards] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const horizontalScrollRef = useRef(null);
+
+  const { user } = useAuthStore();
+  const userId = user?.id;
 
   useEffect(() => {
     const fetchLikedKeyboards = async () => {
       try {
         setLoading(true);
-        const response = await fetch(
+
+        // 로그인 상태 확인
+        if (!userId) {
+          setError("로그인이 필요합니다");
+          setLoading(false);
+          return;
+        }
+
+        const response = await axios.post(
           "https://port-0-edcustom-lxx6l4ha4fc09fa0.sel5.cloudtype.app/checkliked",
+          { memberid: userId },
           {
-            method: "POST",
             headers: {
               "Content-Type": "application/json",
             },
-            body: JSON.stringify({ memberid: 1 }), // 우선 1로 고정
           }
         );
 
-        if (!response.ok) {
-          throw new Error("API 요청에 실패했습니다.");
-        }
-
-        const result = await response.json();
-
-        if (result.status === "OK" && result.data) {
-          setKeyboards(result.data);
+        if (
+          response.data &&
+          response.data.status === "OK" &&
+          response.data.data
+        ) {
+          setKeyboards(response.data.data);
         } else {
           throw new Error(
-            result.message || "데이터를 불러오는데 실패했습니다."
+            response.data.message || "데이터를 불러오는데 실패했습니다."
           );
         }
       } catch (err) {
@@ -345,19 +239,20 @@ const FavoriteProducts = () => {
     };
 
     fetchLikedKeyboards();
-  }, []);
+  }, [userId]);
 
-  const scroll = (direction) => {
-    if (horizontalScrollRef.current) {
-      const scrollAmount = 300;
-      const currentScroll = horizontalScrollRef.current.scrollLeft;
-
-      horizontalScrollRef.current.scrollLeft =
-        direction === "left"
-          ? currentScroll - scrollAmount
-          : currentScroll + scrollAmount;
-    }
-  };
+  if (!userId) {
+    return (
+      <Container>
+        <Title>관심 상품</Title>
+        <Description>좋아요를 누른 키보드 목록입니다.</Description>
+        <ErrorState>
+          <h3>로그인이 필요합니다</h3>
+          <p>관심 상품 목록을 보려면 로그인해 주세요.</p>
+        </ErrorState>
+      </Container>
+    );
+  }
 
   if (loading) {
     return (
@@ -376,10 +271,10 @@ const FavoriteProducts = () => {
       <Container>
         <Title>관심 상품</Title>
         <Description>좋아요를 누른 키보드 목록입니다.</Description>
-        <EmptyState>
+        <ErrorState>
           <h3>오류가 발생했습니다.</h3>
           <p>{error}</p>
-        </EmptyState>
+        </ErrorState>
       </Container>
     );
   }
@@ -391,87 +286,33 @@ const FavoriteProducts = () => {
       <Title>관심 상품</Title>
       <Description>좋아요를 누른 키보드 목록입니다.</Description>
 
-      {hasKeyboards && (
-        <ViewToggle>
-          <ToggleButton
-            active={viewMode === "vertical"}
-            onClick={() => setViewMode("vertical")}
-          >
-            세로 스크롤 (가로 5개)
-          </ToggleButton>
-          <ToggleButton
-            active={viewMode === "horizontal"}
-            onClick={() => setViewMode("horizontal")}
-          >
-            가로 스크롤
-          </ToggleButton>
-        </ViewToggle>
-      )}
-
       {hasKeyboards ? (
-        viewMode === "vertical" ? (
-          <VerticalScroll>
-            <KeyboardGrid>
-              {keyboards.map((keyboard) => (
-                <KeyboardCard key={keyboard.id}>
-                  <LikesBadge>
-                    <LikeIcon /> {keyboard.likes}
-                  </LikesBadge>
-                  <KeyboardImage image={keyboard.imageUrl}>
-                    {!keyboard.imageUrl && (
-                      <KeyboardImagePlaceholder>
-                        키보드 이미지
-                      </KeyboardImagePlaceholder>
-                    )}
-                  </KeyboardImage>
-                  <KeyboardInfo>
-                    <KeyboardName>
-                      {keyboard.keyboardtype || `키보드 #${keyboard.id}`}
-                    </KeyboardName>
-                    <KeyboardDate>
-                      생성일: {formatDate(keyboard.createdAt)}
-                    </KeyboardDate>
-                  </KeyboardInfo>
-                </KeyboardCard>
-              ))}
-            </KeyboardGrid>
-          </VerticalScroll>
-        ) : (
-          <HorizontalScrollContainer>
-            <LeftArrow onClick={() => scroll("left")}>
-              <ArrowIcon direction="left" />
-            </LeftArrow>
-
-            <HorizontalScroll ref={horizontalScrollRef}>
-              {keyboards.map((keyboard) => (
-                <HorizontalKeyboardCard key={keyboard.id}>
-                  <LikesBadge>
-                    <LikeIcon /> {keyboard.likes}
-                  </LikesBadge>
-                  <KeyboardImage image={keyboard.imageUrl}>
-                    {!keyboard.imageUrl && (
-                      <KeyboardImagePlaceholder>
-                        키보드 이미지
-                      </KeyboardImagePlaceholder>
-                    )}
-                  </KeyboardImage>
-                  <KeyboardInfo>
-                    <KeyboardName>
-                      {keyboard.keyboardtype || `키보드 #${keyboard.id}`}
-                    </KeyboardName>
-                    <KeyboardDate>
-                      생성일: {formatDate(keyboard.createdAt)}
-                    </KeyboardDate>
-                  </KeyboardInfo>
-                </HorizontalKeyboardCard>
-              ))}
-            </HorizontalScroll>
-
-            <RightArrow onClick={() => scroll("right")}>
-              <ArrowIcon direction="right" />
-            </RightArrow>
-          </HorizontalScrollContainer>
-        )
+        <VerticalScroll>
+          <KeyboardGrid>
+            {keyboards.map((keyboard) => (
+              <KeyboardCard key={keyboard.id}>
+                <LikesBadge>
+                  <LikeIcon /> {keyboard.likes}
+                </LikesBadge>
+                <KeyboardImage image={keyboard.imageUrl}>
+                  {!keyboard.imageUrl && (
+                    <KeyboardImagePlaceholder>
+                      키보드 이미지
+                    </KeyboardImagePlaceholder>
+                  )}
+                </KeyboardImage>
+                <KeyboardInfo>
+                  <KeyboardName>
+                    {keyboard.keyboardtype || `키보드 #${keyboard.id}`}
+                  </KeyboardName>
+                  <KeyboardDate>
+                    생성일: {formatDate(keyboard.createdAt)}
+                  </KeyboardDate>
+                </KeyboardInfo>
+              </KeyboardCard>
+            ))}
+          </KeyboardGrid>
+        </VerticalScroll>
       ) : (
         <EmptyState>
           <h3>아직 좋아요를 누른 키보드가 없습니다.</h3>
