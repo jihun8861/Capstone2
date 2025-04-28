@@ -2,8 +2,8 @@ import styled from "styled-components";
 import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { FiRefreshCw, FiShare2, FiSave, FiX } from "react-icons/fi";
-import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import { ThreeDModel } from "../../components/model/ThreeDModel";
+import { ColorSelect } from "../../color/ColorSelect";
 import { useAuthStore } from "../../api/useAuthStore";
 import { saveItem } from "../../api/saveItem";
 import { KeyboardModal } from "../../components/modal/KeyboardModal";
@@ -60,6 +60,24 @@ const RightSection = styled.div`
   align-items: center;
 `;
 
+const SelectContainer = styled.div`
+  display: flex;
+  width: 15%;
+  height: 100%;
+  border: solid 1px;
+`;
+
+const ThreeDContainer = styled.div`
+  display: flex;
+  width: 85%;
+  height: 100%;
+  border: solid 1px;
+  position: relative;
+  overflow: hidden;
+  justify-content: center;
+  align-items: center;
+`;
+
 const CustomFrame = styled.div`
   position: relative;
   width: 100%;
@@ -72,17 +90,17 @@ const CustomFrame = styled.div`
 
 const SelectFrame = styled.div`
   position: absolute;
-  top: 45%;
-  left: 30px;
-  transform: translateY(-80%);
+  top: 35%;
+  transform: translateY(-50%);
   width: 280px;
-  height: auto;
+  height: 300px;
   background: white;
   display: flex;
+  justify-content: center;
   flex-direction: column;
   border: solid 1px #e6e5e1;
   z-index: 10;
-  padding-bottom: 10px;
+  padding: 10px;
 `;
 
 const SelectOption = styled.p`
@@ -115,64 +133,6 @@ const IconButton = styled.button`
   }
 `;
 
-const PaginationFrame = styled.div`
-  position: absolute;
-  min-width: 280px;
-  max-width: 400px;
-  width: auto;
-  left: 30px;
-  bottom: 180px;
-  background-color: transparent;
-  border: 2px solid #e1e1e1;
-  display: flex;
-  z-index: 10;
-`;
-
-const PageInfoContainer = styled.div`
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-`;
-
-const PageCount = styled.div`
-  padding: 8px 12px 0;
-  font-size: 16px;
-  color: #777;
-`;
-
-const PageTitle = styled.div`
-  padding: 0 12px 8px;
-  font-size: 21px;
-  font-weight: bold;
-  color: #333;
-  white-space: nowrap;
-`;
-
-const NavButtonContainer = styled.div`
-  display: flex;
-  border-left: 1px solid #e6e5e1;
-  flex-shrink: 0;
-`;
-
-const NavButton = styled.button`
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #555;
-  font-size: 21px;
-  width: 50px;
-  flex-shrink: 0;
-
-  &:first-child {
-    border-right: 2px solid #e1e1e1;
-  }
-`;
-
 const SaveButton = styled.button`
   background-color: #004aad;
   color: white;
@@ -198,11 +158,13 @@ const SaveButton = styled.button`
 `;
 
 const ColorPickerContainer = styled.div`
-  padding: 0 10px;
-  margin-top: 10px;
+  position: absolute;
+  top: 320px;
+  padding: 0 30px;
   display: ${(props) => (props.show ? "block" : "none")};
 `;
 
+// ColorPreview 부분을 수정하여 입력 필드 추가
 const ColorPreview = styled.div`
   display: flex;
   align-items: center;
@@ -222,6 +184,15 @@ const ColorSwatch = styled.div`
 const ColorLabel = styled.span`
   font-size: 14px;
   color: #666;
+  margin-right: 8px;
+`;
+
+const ColorInput = styled.input`
+  width: 80px;
+  padding: 4px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
 `;
 
 export const CustomPage = () => {
@@ -232,20 +203,21 @@ export const CustomPage = () => {
 
   const [selectedModel, setSelectedModel] = useState("barebone");
   const [prevSelectedModel, setPrevSelectedModel] = useState(null);
-  
+
   // 모달 상태 관리
   const [restartModalOpen, setRestartModalOpen] = useState(false);
   const [saveModalOpen, setSaveModalOpen] = useState(false);
   const [modelImage, setModelImage] = useState("");
-  
+
   // 색상 상태 추가
   const [baseColor, setBaseColor] = useState("#ffffff");
+  const [switchColor, setSwitchColor] = useState("#ffffff"); // 스위치 기본 색상 설정
   const [showColorPicker, setShowColorPicker] = useState(false);
 
   const handleModelSelect = (modelType) => {
     setPrevSelectedModel(selectedModel);
     setSelectedModel(modelType);
-    
+
     // 베어본 선택 시 색상 선택기 표시
     if (modelType === "barebone") {
       setShowColorPicker(true);
@@ -254,7 +226,11 @@ export const CustomPage = () => {
     }
   };
 
-  // 다시 시작하기 버튼 처리
+  // 스위치 색상 선택 핸들러
+  const handleSwitchColorSelect = (color) => {
+    setSwitchColor(color);
+  };
+
   const handleRestart = () => {
     if (modelRef.current && modelRef.current.getScreenshot) {
       setModelImage(modelRef.current.getScreenshot());
@@ -277,67 +253,70 @@ export const CustomPage = () => {
       alert("로그인이 필요합니다.");
       return;
     }
-  
+
     let screenshotImage = "";
     if (modelRef.current && modelRef.current.getScreenshot) {
       screenshotImage = modelRef.current.getScreenshot();
       setModelImage(screenshotImage);
-      console.log("스크린샷 이미지 Base64:", screenshotImage); // ← 이 부분 추가
+      console.log("스크린샷 이미지 Base64:", screenshotImage);
     } else {
       alert("이미지 생성에 실패했습니다. 다시 시도해주세요.");
       return;
     }
-  
+
     setSaveModalOpen(true);
   };
-  
+
   const handleConfirmSave = async () => {
     setSaveModalOpen(false);
-  
+
     // FormData 객체 생성
     const formData = new FormData();
-    
-    // JSON 데이터 생성
+
+    // JSON 데이터 생성 - 스위치 색상 정보 추가
     const jsonData = {
       email: user.email,
       barebonecolor: baseColor,
       keyboardtype: size,
       keycapcolor: "test",
       design: "test",
-      switchcolor: "test"
+      switchcolor: switchColor, // 스위치 색상 정보 업데이트
     };
-    
+
     // FormData에 JSON 추가
-    formData.append('DTO', new Blob([JSON.stringify(jsonData)], {
-      type: 'application/json'
-    }));
-    
+    formData.append(
+      "DTO",
+      new Blob([JSON.stringify(jsonData)], {
+        type: "application/json",
+      })
+    );
+
     // Base64 이미지를 파일로 변환
     if (modelImage) {
       // Base64 데이터에서 실제 바이너리 데이터 추출 (data:image/png;base64, 부분 제거)
-      const imageData = modelImage.split(',')[1];
+      const imageData = modelImage.split(",")[1];
       const byteCharacters = atob(imageData);
       const byteArrays = [];
-      
+
       for (let i = 0; i < byteCharacters.length; i++) {
         byteArrays.push(byteCharacters.charCodeAt(i));
       }
-      
+
       const byteArray = new Uint8Array(byteArrays);
-      const blob = new Blob([byteArray], { type: 'image/png' });
-      
+      const blob = new Blob([byteArray], { type: "image/png" });
+
       // 파일 이름 생성 (현재 시간 기준)
       const fileName = `keyboard_${new Date().getTime()}.png`;
-      const file = new File([blob], fileName, { type: 'image/png' });
-      
+      const file = new File([blob], fileName, { type: "image/png" });
+
       // FormData에 파일 추가
-      formData.append('file', file);
+      formData.append("file", file);
     }
-  
+
     try {
       // saveItem 함수 수정 필요 - FormData를 전송할 수 있도록
       const result = await saveItem(formData);
-  
+
       if (result.success) {
         alert("저장이 완료되었습니다.");
       } else {
@@ -349,7 +328,6 @@ export const CustomPage = () => {
       alert("저장 중 오류가 발생했습니다.");
     }
   };
-  
 
   useEffect(() => {
     if (selectedModel) {
@@ -383,58 +361,68 @@ export const CustomPage = () => {
       </HeaderFrame>
 
       <CustomFrame>
-        <SelectFrame>
-          <SelectOption 
-            selected={selectedModel === "barebone"}
-            onClick={() => handleModelSelect("barebone")}
-          >
-            베어본
-          </SelectOption>
-          <SelectOption
-            selected={selectedModel === "switch"}
-            onClick={() => handleModelSelect("switch")}
-          >
-            스위치
-          </SelectOption>
-          <SelectOption
-            selected={selectedModel === "keycap"}
-            onClick={() => handleModelSelect("keycap")}
-          >
-            키캡
-          </SelectOption>
-          
-          {/* 색상 피커 컴포넌트 추가 */}
-          <ColorPickerContainer show={showColorPicker}>
-            <HexColorPicker color={baseColor} onChange={setBaseColor} />
-            <ColorPreview>
-              <ColorSwatch color={baseColor} />
-              <ColorLabel>베어본 색상: {baseColor}</ColorLabel>
-            </ColorPreview>
-          </ColorPickerContainer>
-        </SelectFrame>
+        <SelectContainer>
+          <SelectFrame>
+            <SelectOption
+              selected={selectedModel === "barebone"}
+              onClick={() => handleModelSelect("barebone")}
+            >
+              베어본
+            </SelectOption>
+            <SelectOption
+              selected={selectedModel === "switch"}
+              onClick={() => handleModelSelect("switch")}
+            >
+              스위치
+            </SelectOption>
+            <SelectOption
+              selected={selectedModel === "keycap"}
+              onClick={() => handleModelSelect("keycap")}
+            >
+              키캡
+            </SelectOption>
 
-        <PaginationFrame>
-          <PageInfoContainer>
-            <PageCount>1/3</PageCount>
-            <PageTitle>베어본 (BAREBONE)</PageTitle>
-          </PageInfoContainer>
-          <NavButtonContainer>
-            <NavButton>
-              <FiChevronLeft />
-            </NavButton>
-            <NavButton>
-              <FiChevronRight />
-            </NavButton>
-          </NavButtonContainer>
-        </PaginationFrame>
+            {/* 베어본 선택 시에만 표시되는 색상 선택기 */}
+            <ColorPickerContainer show={showColorPicker}>
+              <HexColorPicker color={baseColor} onChange={setBaseColor} />
+              <ColorPreview>
+                <ColorSwatch color={baseColor} />
+                <ColorLabel>베어본 색상:</ColorLabel>
+                <ColorInput
+                  value={baseColor}
+                  onChange={(e) => {
+                    const hexRegex = /^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/;
+                    if (hexRegex.test(e.target.value)) {
+                      setBaseColor(e.target.value);
+                    } else if (
+                      e.target.value.startsWith("#") &&
+                      e.target.value.length <= 7
+                    ) {
+                      setBaseColor(e.target.value);
+                    }
+                  }}
+                  onBlur={(e) => {
+                    const hexRegex = /^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/;
+                    if (!hexRegex.test(e.target.value)) {
+                      setBaseColor(baseColor);
+                    }
+                  }}
+                />
+              </ColorPreview>
+            </ColorPickerContainer>
+          </SelectFrame>
+        </SelectContainer>
 
-        <ThreeDModel
-          ref={modelRef}
-          size={size}
-          selectedModel={selectedModel === "barebone" ? null : selectedModel}
-          prevSelectedModel={prevSelectedModel}
-          baseColor={baseColor} // 색상 전달
-        />
+        <ThreeDContainer>
+          <ThreeDModel
+            ref={modelRef}
+            size={size}
+            selectedModel={selectedModel === "barebone" ? null : selectedModel}
+            prevSelectedModel={prevSelectedModel}
+            baseColor={baseColor}
+            switchColor={switchColor} // 스위치 색상 전달
+          />
+        </ThreeDContainer>
       </CustomFrame>
 
       {/* 다시 시작하기 모달 */}
@@ -458,6 +446,11 @@ export const CustomPage = () => {
         confirmText="저장하기"
         cancelText="취소"
       />
+
+      {/* 스위치 선택 시에만 ColorSelect 컴포넌트 표시 */}
+      {selectedModel === "switch" && (
+        <ColorSelect onColorSelect={handleSwitchColorSelect} />
+      )}
     </Container>
   );
 };
