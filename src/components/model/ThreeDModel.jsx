@@ -12,9 +12,6 @@ import { useParams } from "react-router-dom";
 import { OrbitControls, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 
-// 기존 코드 부분 유지...
-// Container, KEYBOARD_CENTER_OFFSETS, KEYBOARD_CAMERA_SETTINGS 등 기존 코드는 그대로 유지
-
 const Container = styled.div`
   width: 100%;
   height: 100%;
@@ -33,8 +30,15 @@ const KEYBOARD_CENTER_OFFSETS = {
 // 키보드 크기별 카메라 설정
 const KEYBOARD_CAMERA_SETTINGS = {
   "60": { position: [0, 7, 10], target: [0, 0, 0] },
-  "80": { position: [0, 7, 12], target: [0, 0, 0] },
+  "80": { position: [0, 7, 11], target: [0, 0, 0] },
   "100": { position: [0, 7, 14], target: [0, 0, 0] },
+};
+
+// 스크린샷용 카메라 설정 - 중앙 정렬을 위해 카메라 타겟 수정
+const SCREENSHOT_CAMERA_SETTINGS = {
+  "60": { position: [-0.9, 9, 10], target: [-0.9, 0, 0] },
+  "80": { position: [-1.2, 9, 11], target: [-1.2, 0, 0] },
+  "100": { position: [-1.2, 9, 14], target: [-1.2, 0, 0] },
 };
 
 const KeyboardPart = ({
@@ -77,12 +81,12 @@ const KeyboardPart = ({
       }
     });
   
-    // 💡 중심점 계산
+    // 중심점 계산
     const box = new THREE.Box3().setFromObject(scene);
     const center = new THREE.Vector3();
     box.getCenter(center);
   
-    // 💡 중심점을 원점으로 맞추기
+    // 중심점을 원점으로 맞추기
     scene.position.sub(center);
   }, [scene, color, isTopCase, isTopSwitch]);
   
@@ -143,19 +147,39 @@ const KeyboardPart = ({
   ) : null;
 };
 
-const ScreenshotHandler = forwardRef(({ children }, ref) => {
-  // ScreenshotHandler 컴포넌트 코드는 그대로 유지
+const ScreenshotHandler = forwardRef(({ children, size }, ref) => {
+  // 수정된 ScreenshotHandler 컴포넌트
   const { gl, scene, camera } = useThree();
 
   useImperativeHandle(ref, () => ({
     takeScreenshot: () => {
+      // 기존 카메라 상태 저장
       const originalPosition = camera.position.clone();
       const originalRotation = camera.rotation.clone();
+      const originalQuaternion = camera.quaternion.clone();
 
+      // 스크린샷을 위한 카메라 위치 설정
+      const screenshotSettings = SCREENSHOT_CAMERA_SETTINGS[size] || SCREENSHOT_CAMERA_SETTINGS["100"];
+      
+      // 카메라 위치 설정
+      camera.position.set(...screenshotSettings.position);
+      
+      // 카메라가 모델의 중앙을 바라보도록 설정
+      // centerOffset 값을 타겟에 적용하여 모델이 중앙에 보이도록 조정
+      camera.lookAt(new THREE.Vector3(...screenshotSettings.target));
+      
+      // 렌더링
+      gl.render(scene, camera);
+
+      // 스크린샷 생성
       const dataURL = gl.domElement.toDataURL("image/png");
 
+      // 카메라 원래 상태로 복원
       camera.position.copy(originalPosition);
+      camera.quaternion.copy(originalQuaternion);
       camera.rotation.copy(originalRotation);
+      
+      // 복원 후 다시 렌더링
       gl.render(scene, camera);
 
       return dataURL;
