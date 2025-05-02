@@ -2,7 +2,6 @@ import styled from "styled-components";
 import { Header } from "./Header";
 import { Footer } from "./Footer";
 import { ScrollToTop } from "./ScrollToTop";
-import { ChatBot } from "./ChatBot";
 
 const Container = styled.div`
   width: 100%;
@@ -20,8 +19,7 @@ const Layout = ({ mainContent }) => {
       <Header />
       <Main>{mainContent}</Main>
       <Footer />
-      <ChatBot/>
-      {/*<ScrollToTop/>*/}
+      <ScrollToTop/>
     </Container>
   );
 };

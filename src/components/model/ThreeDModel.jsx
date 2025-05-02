@@ -24,7 +24,7 @@ const Container = styled.div`
 const KEYBOARD_CENTER_OFFSETS = {
   "60": { x: -0.9, y: 0, z: 0 },
   "80": { x: -1.2, y: 0, z: 0 },
-  "100": { x: -1.5, y: 0, z: 0 },
+  "100": { x: -1.5 , y: 0, z: 0 },
 };
 
 // 키보드 크기별 카메라 설정

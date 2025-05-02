@@ -4,6 +4,7 @@ import { useParams } from "react-router-dom";
 import { FiRefreshCw, FiShare2, FiSave, FiX } from "react-icons/fi";
 import { ThreeDModel } from "../../components/model/ThreeDModel";
 import { ColorSelect } from "../../color/ColorSelect";
+import { KeycapArray } from "./KeycapArray";
 import { useAuthStore } from "../../api/useAuthStore";
 import { saveItem } from "../../api/saveItem";
 import { KeyboardModal } from "../../components/modal/KeyboardModal";
@@ -208,11 +209,17 @@ export const CustomPage = () => {
   const [restartModalOpen, setRestartModalOpen] = useState(false);
   const [saveModalOpen, setSaveModalOpen] = useState(false);
   const [modelImage, setModelImage] = useState("");
+  
+  // 제목 상태 추가
+  const [designTitle, setDesignTitle] = useState("");
 
   // 색상 상태 추가
   const [baseColor, setBaseColor] = useState("#ffffff");
-  const [switchColor, setSwitchColor] = useState("#ffffff"); // 스위치 기본 색상 설정
+  const [switchColor, setSwitchColor] = useState("#ffffff");
   const [showColorPicker, setShowColorPicker] = useState(false);
+  
+  // 키캡 배열 컴포넌트 표시 상태
+  const [showKeycapArray, setShowKeycapArray] = useState(false);
 
   const handleModelSelect = (modelType) => {
     setPrevSelectedModel(selectedModel);
@@ -221,8 +228,13 @@ export const CustomPage = () => {
     // 베어본 선택 시 색상 선택기 표시
     if (modelType === "barebone") {
       setShowColorPicker(true);
+      setShowKeycapArray(false);
+    } else if (modelType === "keycap") {
+      setShowColorPicker(false);
+      setShowKeycapArray(true);
     } else {
       setShowColorPicker(false);
+      setShowKeycapArray(false);
     }
   };
 
@@ -264,18 +276,32 @@ export const CustomPage = () => {
       return;
     }
 
+    // 모달 열기 전에 제목 초기화 (이전에 입력한 값이 남아있지 않도록)
+    setDesignTitle("");
     setSaveModalOpen(true);
   };
 
+  // 제목 변경 핸들러
+  const handleTitleChange = (e) => {
+    setDesignTitle(e.target.value);
+  };
+
   const handleConfirmSave = async () => {
+    // 제목이 비어있는지 확인
+    if (!designTitle.trim()) {
+      alert("제목을 입력해주세요.");
+      return;
+    }
+    
     setSaveModalOpen(false);
 
     // FormData 객체 생성
     const formData = new FormData();
 
-    // JSON 데이터 생성 - 스위치 색상 정보 추가
+    // JSON 데이터 생성 - 제목과 스위치 색상 정보 추가
     const jsonData = {
       email: user.email,
+      title: designTitle, // 제목 정보 추가
       barebonecolor: baseColor,
       keyboardtype: size,
       keycapcolor: "test",
@@ -436,7 +462,7 @@ export const CustomPage = () => {
         cancelText="취소"
       />
 
-      {/* 저장하기 모달 */}
+      {/* 저장하기 모달 - 제목 입력 필드 추가 */}
       <KeyboardModal
         isOpen={saveModalOpen}
         onClose={() => setSaveModalOpen(false)}
@@ -445,11 +471,22 @@ export const CustomPage = () => {
         message="현재 디자인을 저장하시겠습니까?"
         confirmText="저장하기"
         cancelText="취소"
+        showTitleInput={true} // 제목 입력 필드 표시
+        titleValue={designTitle} // 제목 값
+        onTitleChange={handleTitleChange} // 제목 변경 핸들러
       />
 
       {/* 스위치 선택 시에만 ColorSelect 컴포넌트 표시 */}
       {selectedModel === "switch" && (
         <ColorSelect onColorSelect={handleSwitchColorSelect} />
+      )}
+
+      {/* 키캡 선택 시에만 KeycapArray 컴포넌트 표시 */}
+      {showKeycapArray && (
+        <KeycapArray 
+          size={size || "60"} 
+          onClose={() => setShowKeycapArray(false)}
+        />
       )}
     </Container>
   );
