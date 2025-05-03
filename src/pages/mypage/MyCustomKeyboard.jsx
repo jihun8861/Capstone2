@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import styled from "styled-components";
 import { useAuthStore } from "../../api/useAuthStore";
 import axios from "axios";
-import { shareItem } from "../../api/shareItem"; // 공유 기능 import 추가
-import { FiShare2 } from "react-icons/fi"; // 공유 아이콘 추가
+import { shareItem } from "../../api/shareItem";
+import { FiShare2 } from "react-icons/fi";
 
 const Container = styled.div`
   display: flex;
@@ -169,7 +169,6 @@ const EmptyState = styled.div`
   margin-top: 180px;
 `;
 
-// 좋아요 아이콘과 숫자를 표시하는 배지 추가
 const LikesBadge = styled.div`
   position: absolute;
   top: 10px;
@@ -184,7 +183,6 @@ const LikesBadge = styled.div`
   z-index: 5;
 `;
 
-// 공유 배지 추가
 const ShareBadge = styled.div`
   position: absolute;
   top: 10px;
@@ -199,14 +197,23 @@ const ShareBadge = styled.div`
   gap: 5px;
   z-index: 5;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.2s;
 
   &:hover {
     background-color: rgba(0, 0, 0, 0.8);
+    transform: scale(1.05);
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+
+  &.sharing {
+    background-color: rgba(76, 175, 80, 0.8);
+    pointer-events: none;
   }
 `;
 
-// 알림 토스트 컴포넌트 추가
 const Toast = styled.div`
   position: fixed;
   bottom: 20px;
@@ -215,15 +222,30 @@ const Toast = styled.div`
   background-color: ${(props) => (props.success ? "#4caf50" : "#f44336")};
   color: white;
   padding: 12px 24px;
-  border-radius: 4px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
   z-index: 1000;
   opacity: ${(props) => (props.show ? 1 : 0)};
   visibility: ${(props) => (props.show ? "visible" : "hidden")};
-  transition: opacity 0.3s, visibility 0.3s;
+  transition: opacity 0.3s, visibility 0.3s, transform 0.3s;
+  font-weight: 500;
+  max-width: 80%;
+  text-align: center;
+  transform: ${(props) =>
+    props.show
+      ? "translateX(-50%) translateY(0)"
+      : "translateX(-50%) translateY(20px)"};
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  &:before {
+    content: ${(props) => (props.success ? "'✓'" : "'ⓘ'")};
+    font-weight: bold;
+    font-size: 16px;
+  }
 `;
 
-// 좋아요 아이콘 컴포넌트
 const LikeIcon = () => (
   <svg
     width="16"
@@ -256,6 +278,7 @@ const MyCustomKeyboard = () => {
     message: "",
     success: true,
   });
+  const [sharingKeyboardId, setSharingKeyboardId] = useState(null);
 
   const { user } = useAuthStore();
   const userEmail = user?.email || "";
@@ -285,9 +308,50 @@ const MyCustomKeyboard = () => {
           response.data.status === "OK" &&
           Array.isArray(response.data.data)
         ) {
-          // API 응답에서 각 키보드에 likes 필드가 없다면 추가 API 호출로 좋아요 정보를 가져와야 할 수 있음
-          // 여기서는 응답에 likes 필드가 있다고 가정합니다
-          setKeyboards(response.data.data);
+          const myKeyboards = response.data.data;
+
+          const keyboardIds = myKeyboards.map((keyboard) => keyboard.id);
+
+          if (keyboardIds.length > 0) {
+            try {
+              const likesResponse = await axios.post(
+                "https://port-0-edcustom-lxx6l4ha4fc09fa0.sel5.cloudtype.app/checkliked",
+                { ids: keyboardIds },
+                {
+                  headers: {
+                    "Content-Type": "application/json;charset=UTF-8",
+                  },
+                }
+              );
+
+              if (
+                likesResponse.data &&
+                likesResponse.data.status === "OK" &&
+                Array.isArray(likesResponse.data.data)
+              ) {
+                const likesMap = {};
+                likesResponse.data.data.forEach((likeInfo) => {
+                  if (likeInfo.id) {
+                    likesMap[likeInfo.id] = likeInfo.likes || 0;
+                  }
+                });
+
+                const updatedKeyboards = myKeyboards.map((keyboard) => ({
+                  ...keyboard,
+                  likes: likesMap[keyboard.id] || keyboard.likes || 0,
+                }));
+
+                setKeyboards(updatedKeyboards);
+              } else {
+                setKeyboards(myKeyboards);
+              }
+            } catch (likesErr) {
+              console.error("좋아요 정보 가져오기 오류:", likesErr);
+              setKeyboards(myKeyboards);
+            }
+          } else {
+            setKeyboards(myKeyboards);
+          }
         } else {
           throw new Error("응답 형식이 올바르지 않습니다");
         }
@@ -304,41 +368,64 @@ const MyCustomKeyboard = () => {
     fetchKeyboards();
   }, [userEmail]);
 
-  // 토스트 메시지 표시 함수
+  const toastTimerRef = useRef(null);
+
   const showToast = (message, success = true) => {
-    setToast({ show: true, message, success });
-    setTimeout(() => {
-      setToast({ ...toast, show: false });
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+    }
+
+    if (toast.show) {
+      setToast({ show: false, message: "", success });
+      setTimeout(() => {
+        setToast({ show: true, message, success });
+      }, 100);
+    } else {
+      setToast({ show: true, message, success });
+    }
+
+    toastTimerRef.current = setTimeout(() => {
+      setToast((prevToast) => ({ ...prevToast, show: false }));
     }, 3000);
   };
 
-  // 공유 기능 처리 함수
   const handleShare = async (keyboard, e) => {
-    e.stopPropagation(); // 카드 전체 클릭 이벤트 방지
+    e.stopPropagation();
 
     if (!userEmail) {
       showToast("로그인이 필요합니다.", false);
       return;
     }
 
+    if (sharingKeyboardId === keyboard.id) {
+      return;
+    }
+
+    setSharingKeyboardId(keyboard.id);
+    showToast("키보드 공유 중...", true);
+
     try {
-      // FormData 객체 생성
       const formData = new FormData();
 
-      // JSON 데이터 생성
+      const keyboardName = getKeyboardName(
+        keyboard,
+        keyboards.indexOf(keyboard)
+      );
+
       const jsonData = {
         email: userEmail,
+        title: keyboardName,
         barebonecolor: keyboard.barebonecolor || "string",
         keyboardtype: keyboard.keyboardtype || "string",
         keycapcolor: keyboard.keycapcolor || "string",
         design: keyboard.design || "string",
         switchcolor: keyboard.switchcolor || "string",
+        imageUrl: keyboard.imageUrl || "string",
       };
 
       console.log("공유할 키보드 데이터:", keyboard);
       console.log("FormData에 추가할 JSON:", jsonData);
 
-      // FormData에 JSON 추가
       formData.append(
         "DTO",
         new Blob([JSON.stringify(jsonData)], {
@@ -346,42 +433,37 @@ const MyCustomKeyboard = () => {
         })
       );
 
-      // 이미지 처리
       if (keyboard.imageUrl) {
         try {
-          // 이미지 URL에서 데이터 가져오기 (CORS 문제 발생 가능)
           const imageResponse = await fetch(keyboard.imageUrl);
           const imageBlob = await imageResponse.blob();
 
-          // 파일 이름 생성
           const fileName = `shared_keyboard_${new Date().getTime()}.png`;
           const file = new File([imageBlob], fileName, { type: "image/png" });
 
-          // FormData에 파일 추가
           formData.append("file", file);
         } catch (imageError) {
           console.error("이미지 처리 오류:", imageError);
-          // 이미지 처리 오류가 있어도 JSON 데이터만으로 계속 진행
+          showToast(
+            "이미지 처리 중 오류가 발생했으나, 공유를 계속합니다.",
+            false
+          );
         }
       }
 
-      console.log("FormData 내용 확인:");
-      for (let pair of formData.entries()) {
-        console.log(pair[0], typeof pair[1], pair[1]);
-      }
-
-      // API 호출
       const result = await shareItem(formData);
       console.log("API 응답:", result);
 
       if (result.success) {
-        showToast("키보드가 성공적으로 공유되었습니다!", true);
+        showToast(`${keyboardName}이(가) 성공적으로 공유되었습니다!`, true);
       } else {
         throw new Error(result.message || "공유 중 오류가 발생했습니다.");
       }
     } catch (err) {
       console.error("키보드 공유 오류:", err);
       showToast(err.message || "공유 중 오류가 발생했습니다.", false);
+    } finally {
+      setSharingKeyboardId(null);
     }
   };
 
@@ -438,14 +520,16 @@ const MyCustomKeyboard = () => {
           <KeyboardGrid>
             {keyboards.map((keyboard, index) => (
               <KeyboardCard key={keyboard.id}>
-                {/* 좋아요 배지 */}
                 <LikesBadge>
                   <LikeIcon /> {keyboard.likes || 0}
                 </LikesBadge>
 
-                {/* 공유 배지 추가 */}
-                <ShareBadge onClick={(e) => handleShare(keyboard, e)}>
-                  <FiShare2 size={14} /> 공유
+                <ShareBadge
+                  onClick={(e) => handleShare(keyboard, e)}
+                  className={sharingKeyboardId === keyboard.id ? "sharing" : ""}
+                >
+                  <FiShare2 size={14} />
+                  {sharingKeyboardId === keyboard.id ? "공유 중..." : "공유"}
                 </ShareBadge>
 
                 <KeyboardImage image={keyboard.imageUrl}>
@@ -482,7 +566,6 @@ const MyCustomKeyboard = () => {
         </EmptyState>
       )}
 
-      {/* 토스트 메시지 컴포넌트 */}
       <Toast show={toast.show} success={toast.success}>
         {toast.message}
       </Toast>
