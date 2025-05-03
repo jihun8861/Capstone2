@@ -51,12 +51,14 @@ const KeyboardPart = ({
   visible = true,
   color = null,
   centerOffset,
+  keycapColors = null, // 키캡 색상 맵 추가
 }) => {
-  // KeyboardPart 컴포넌트 코드는 그대로 유지
   const { scene } = useGLTF(modelPath);
   const modelRef = useRef();
   const isTopCase = modelPath.includes("5.TopCase.glb");
   const isTopSwitch = modelPath.includes("TopSwitchs.glb");
+  const isEngraving = modelPath.includes("Engraving.glb");
+  const isKeycaps = modelPath.includes("Keycaps.glb");
 
   useEffect(() => {
     scene.traverse((child) => {
@@ -69,6 +71,7 @@ const KeyboardPart = ({
           child.castShadow = true;
         }
   
+        // TopCase 또는 TopSwitch의 경우 단일 색상 적용
         if ((isTopCase || isTopSwitch) && color) {
           const originalMaterial = child.material;
           const newMaterial = new THREE.MeshStandardMaterial({
@@ -77,6 +80,45 @@ const KeyboardPart = ({
             metalness: originalMaterial?.metalness ?? 0.3,
           });
           child.material = newMaterial;
+        }
+        
+        // 키캡의 경우 개별 메시에 색상 적용
+        if (isKeycaps && keycapColors) {
+          // 메시 이름에서 키캡 식별자 추출 (예: "KeyA", "KeyB" 등)
+          const keycapId = child.name;
+          
+          // 해당 키캡에 대한 색상이 있으면 적용
+          if (keycapColors[keycapId]) {
+            const originalMaterial = child.material;
+            const newMaterial = new THREE.MeshStandardMaterial({
+              color: new THREE.Color(keycapColors[keycapId]),
+              roughness: originalMaterial?.roughness ?? 0.5,
+              metalness: originalMaterial?.metalness ?? 0.3,
+            });
+            child.material = newMaterial;
+          } else if (color) {
+            // 기본 색상 적용 (모든 키캡에 동일한 색상)
+            const originalMaterial = child.material;
+            const newMaterial = new THREE.MeshStandardMaterial({
+              color: new THREE.Color(color),
+              roughness: originalMaterial?.roughness ?? 0.5,
+              metalness: originalMaterial?.metalness ?? 0.3,
+            });
+            child.material = newMaterial;
+          }
+        }
+        
+        // 각인(Engraving) 모델의 가시성 개선
+        if (isEngraving) {
+          const engravingMaterial = new THREE.MeshStandardMaterial({
+            color: new THREE.Color(0x000000), // 검은색으로 변경
+            roughness: 0.6, // 반사를 줄이기 위해 roughness 증가
+            metalness: 0.0, // 금속성을 제거하여 반사 감소
+            emissive: new THREE.Color(0x000000),
+            emissiveIntensity: 0.5,
+          });
+          child.material = engravingMaterial;
+          child.renderOrder = 999; // 렌더링 순서를 높여 다른 요소보다 앞에 그려지도록 함
         }
       }
     });
@@ -88,7 +130,7 @@ const KeyboardPart = ({
   
     // 중심점을 원점으로 맞추기
     scene.position.sub(center);
-  }, [scene, color, isTopCase, isTopSwitch]);
+  }, [scene, color, keycapColors, isTopCase, isTopSwitch, isKeycaps, isEngraving]);
   
 
   useFrame(() => {
@@ -234,12 +276,21 @@ const KeyboardOrbitControls = ({ resetCamera, cameraSettings }) => {
   );
 };
 
-const Model = ({ size, selectedModel, baseColor, switchColor, resetStatus }) => {
+const Model = ({ 
+  size, 
+  selectedModel, 
+  baseColor, 
+  switchColor, 
+  resetStatus,
+  keycapColors = {} // 키캡 색상 맵 추가
+}) => {
   const [baseAnimationProgress, setBaseAnimationProgress] = useState(0);
   const [switchAnimationProgress, setSwitchAnimationProgress] = useState(0);
   const [keycapAnimationProgress, setKeycapAnimationProgress] = useState(0);
+  const [engravingAnimationProgress, setEngravingAnimationProgress] = useState(0);
   const [showSwitch, setShowSwitch] = useState(false);
   const [showKeycap, setShowKeycap] = useState(false);
+  const [showEngraving, setShowEngraving] = useState(false);
   const groupRef = useRef();
   const scale = KEYBOARD_POSITIONS.getScale(size);
   
@@ -249,6 +300,7 @@ const Model = ({ size, selectedModel, baseColor, switchColor, resetStatus }) => 
   const baseAnimationExecuted = useRef(false);
   const switchAnimationExecuted = useRef({});
   const keycapAnimationExecuted = useRef({});
+  const engravingAnimationExecuted = useRef({});
 
   // 다시 시작하기 효과를 위한 리셋 함수
   useEffect(() => {
@@ -257,15 +309,18 @@ const Model = ({ size, selectedModel, baseColor, switchColor, resetStatus }) => 
       baseAnimationExecuted.current = false;
       switchAnimationExecuted.current = {};
       keycapAnimationExecuted.current = {};
+      engravingAnimationExecuted.current = {};
       
       // 애니메이션 진행률 초기화
       setBaseAnimationProgress(0);
       setSwitchAnimationProgress(0);
       setKeycapAnimationProgress(0);
+      setEngravingAnimationProgress(0);
       
-      // 스위치와 키캡 표시 상태 초기화
+      // 스위치와 키캡, 각인 표시 상태 초기화
       setShowSwitch(false);
       setShowKeycap(false);
+      setShowEngraving(false);
 
       // 애니메이션 다시 시작
       setTimeout(() => {
@@ -279,11 +334,14 @@ const Model = ({ size, selectedModel, baseColor, switchColor, resetStatus }) => 
     baseAnimationExecuted.current = false;
     switchAnimationExecuted.current = {};
     keycapAnimationExecuted.current = {};
+    engravingAnimationExecuted.current = {};
     setBaseAnimationProgress(0);
     setSwitchAnimationProgress(0);
     setKeycapAnimationProgress(0);
+    setEngravingAnimationProgress(0);
     setShowSwitch(false);
     setShowKeycap(false);
+    setShowEngraving(false);
   }, [size]);
 
   // 기본 파트 애니메이션 함수
@@ -323,6 +381,7 @@ const Model = ({ size, selectedModel, baseColor, switchColor, resetStatus }) => 
   const BOTTOM_SWITCH_MODEL_PATH = `/keyboard/${size}keyboard/${size}BottomSwitchs.glb`;
   const TOP_SWITCH_MODEL_PATH = `/keyboard/${size}keyboard/${size}TopSwitchs.glb`;
   const KEYCAP_MODEL_PATH = `/keyboard/${size}keyboard/${size}Keycaps.glb`;
+  const ENGRAVING_MODEL_PATH = `/keyboard/${size}keyboard/${size}Engraving.glb`; // 각인 모델 경로 추가
 
   useEffect(() => {
     if (selectedModel === "switch" && !showSwitch) {
@@ -351,30 +410,54 @@ const Model = ({ size, selectedModel, baseColor, switchColor, resetStatus }) => 
       }, 100);
     } else if (selectedModel === "keycap" && !showKeycap) {
       setShowKeycap(true);
+      setShowEngraving(true); // 키캡 선택 시 각인도 함께 표시
+      
       if (keycapAnimationExecuted.current[size]) {
         setKeycapAnimationProgress(1);
-        return;
+      } else {
+        setTimeout(() => {
+          const duration = 1500;
+          const startTime = Date.now();
+  
+          const updateAnimation = () => {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            setKeycapAnimationProgress(progress);
+            if (progress < 1) {
+              requestAnimationFrame(updateAnimation);
+            } else {
+              keycapAnimationExecuted.current[size] = true;
+            }
+          };
+  
+          requestAnimationFrame(updateAnimation);
+        }, 100);
       }
-
-      setTimeout(() => {
-        const duration = 1500;
-        const startTime = Date.now();
-
-        const updateAnimation = () => {
-          const elapsed = Date.now() - startTime;
-          const progress = Math.min(elapsed / duration, 1);
-          setKeycapAnimationProgress(progress);
-          if (progress < 1) {
-            requestAnimationFrame(updateAnimation);
-          } else {
-            keycapAnimationExecuted.current[size] = true;
-          }
-        };
-
-        requestAnimationFrame(updateAnimation);
-      }, 100);
+      
+      // 각인 애니메이션 실행
+      if (engravingAnimationExecuted.current[size]) {
+        setEngravingAnimationProgress(1);
+      } else {
+        setTimeout(() => {
+          const duration = 1500;
+          const startTime = Date.now();
+  
+          const updateAnimation = () => {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            setEngravingAnimationProgress(progress);
+            if (progress < 1) {
+              requestAnimationFrame(updateAnimation);
+            } else {
+              engravingAnimationExecuted.current[size] = true;
+            }
+          };
+  
+          requestAnimationFrame(updateAnimation);
+        }, 100);
+      }
     }
-  }, [selectedModel, size, showSwitch, showKeycap]);
+  }, [selectedModel, size, showSwitch, showKeycap, showEngraving]);
 
   return (
     <group ref={groupRef} position={[0, 0, 0]}>
@@ -425,6 +508,20 @@ const Model = ({ size, selectedModel, baseColor, switchColor, resetStatus }) => 
           partType="keycap"
           size={size}
           centerOffset={centerOffset}
+          keycapColors={keycapColors} // 키캡 색상 맵 전달
+        />
+      )}
+
+      {/* 각인 모델 추가 */}
+      {showEngraving && (
+        <KeyboardPart
+          key="engraving"
+          modelPath={ENGRAVING_MODEL_PATH}
+          animationProgress={engravingAnimationProgress}
+          scale={scale}
+          partType="keycap" // 키캡과 동일한 애니메이션 파트 타입 사용
+          size={size}
+          centerOffset={centerOffset}
         />
       )}
     </group>
@@ -451,7 +548,13 @@ const ShadowLimiter = () => {
 };
 
 export const ThreeDModel = forwardRef(
-  ({ size, selectedModel, baseColor, switchColor }, ref) => {
+  ({ 
+    size, 
+    selectedModel, 
+    baseColor, 
+    switchColor, 
+    keycapColors = {} // 키캡 색상 맵 추가
+  }, ref) => {
     const { size: urlSize } = useParams();
     const keyboardSize = size || urlSize || "100";
     const validSize = ["60", "80", "100"].includes(keyboardSize)
@@ -496,10 +599,10 @@ export const ThreeDModel = forwardRef(
           }}
         >
           <ScreenshotHandler ref={screenshotRef} size={validSize}>
-            <ambientLight intensity={2.2} />
+            <ambientLight intensity={1.8} /> {/* 전체 환경 조명 밝기 약간 낮춤 */}
             <directionalLight
               position={[0, 20, 0]}
-              intensity={5.0}
+              intensity={3.5} /* 상단 조명 강도 낮춤 */
               castShadow
               shadow-camera-left={-5}
               shadow-camera-right={5}
@@ -510,19 +613,19 @@ export const ThreeDModel = forwardRef(
 
             <directionalLight
               position={[5, 5, 5]}
-              intensity={2.0}
+              intensity={1.5} /* 측면 조명 강도 낮춤 */
               castShadow={false}
             />
 
             <directionalLight
               position={[-5, 5, 5]}
-              intensity={2.0}
+              intensity={1.5} /* 측면 조명 강도 낮춤 */
               castShadow={false}
             />
 
             <directionalLight
               position={[0, 5, -5]}
-              intensity={1.5}
+              intensity={1.0} /* 후면 조명 강도 낮춤 */
               castShadow={false}
             />
 
@@ -537,6 +640,7 @@ export const ThreeDModel = forwardRef(
               selectedModel={selectedModel}
               baseColor={baseColor}
               switchColor={switchColor}
+              keycapColors={keycapColors} // 키캡 색상 맵 전달
               resetStatus={resetStatus}
             />
           </ScreenshotHandler>

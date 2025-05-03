@@ -6,7 +6,7 @@ const KeyboardContainer = styled.div`
   bottom: 0;
   width: 100%;
   background: none;
-  z-index: 100;
+  z-index: 10;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -57,11 +57,10 @@ const KeyCap = styled.div`
   }
 `;
 
-// 레이아웃: 총 5줄, 각 줄은 총합 100의 비율로 구성
 const layout = [
   {
     keys: [
-      { label: "ESC", w: 6 }, { label: "1", w: 6 }, { label: "2", w: 6 }, { label: "3", w: 6 },
+      { label: "`~", w: 6 }, { label: "1", w: 6 }, { label: "2", w: 6 }, { label: "3", w: 6 },
       { label: "4", w: 6 }, { label: "5", w: 6 }, { label: "6", w: 6 }, { label: "7", w: 6 },
       { label: "8", w: 6 }, { label: "9", w: 6 }, { label: "0", w: 6 }, { label: "-", w: 6 },
       { label: "=", w: 6 }, { label: "BACK", w: 16 }
@@ -94,7 +93,7 @@ const layout = [
     keys: [
       { label: "CTRL", w: 8 }, { label: "WIN", w: 8 }, { label: "ALT", w: 8 },
       { label: "SPACE", w: 40 },
-      { label: "ALT", w: 8 }, { label: "FN", w: 8 }, { label: "CTRL", w: 10 }
+      { label: "ALT", w: 8 }, { label: "FN", w: 8 },{ label: "Menu", w: 10 }, { label: "CTRL", w: 10 }
     ]
   }
 ];
@@ -107,7 +106,8 @@ export const KeycapArray = () => {
   };
 
   const handleNext = () => {
-    if (currentRow < layout.length - 1) setCurrentRow(currentRow + 1);
+    if (currentRow < layout.length - 1) 
+        setCurrentRow(currentRow + 1);
   };
 
   return (
