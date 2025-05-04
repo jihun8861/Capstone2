@@ -203,12 +203,10 @@ const FavoriteProducts = () => {
   const { user } = useAuthStore();
   const userId = user?.id;
 
-  // 좋아요한 키보드 목록을 불러오는 함수
   const fetchLikedKeyboards = async () => {
     try {
       setLoading(true);
 
-      // 로그인 상태 확인
       if (!userId) {
         setError("로그인이 필요합니다");
         setLoading(false);
@@ -237,7 +235,7 @@ const FavoriteProducts = () => {
         );
       }
     } catch (err) {
-      setError(err.message);
+      setError("좋아요를 누른 키보드가 없습니다. 관심 상품을 등록해 주세요!");
       console.error("좋아요한 키보드를 불러오는데 실패했습니다:", err);
     } finally {
       setLoading(false);
@@ -248,7 +246,6 @@ const FavoriteProducts = () => {
     fetchLikedKeyboards();
   }, [userId]);
 
-  // 좋아요 취소 처리 함수 (like 엔드포인트 사용)
   const handleUnlike = async (keyboardId) => {
     try {
       if (!userId) {
@@ -256,7 +253,6 @@ const FavoriteProducts = () => {
         return;
       }
 
-      // /like 엔드포인트를 사용하여 좋아요 상태 토글
       const response = await axios.post(
         "https://port-0-edcustom-lxx6l4ha4fc09fa0.sel5.cloudtype.app/like",
         {
@@ -271,7 +267,6 @@ const FavoriteProducts = () => {
       );
 
       if (response.data && response.data.status === "OK") {
-        // 좋아요 취소 후 목록에서 해당 키보드 제거 (UI에서 즉시 반영)
         setKeyboards(
           keyboards.filter((keyboard) => keyboard.id !== keyboardId)
         );
@@ -315,8 +310,7 @@ const FavoriteProducts = () => {
         <Title>관심 상품</Title>
         <Description>좋아요를 누른 키보드 목록입니다.</Description>
         <ErrorState>
-          <h3>오류가 발생했습니다.</h3>
-          <p>{error}</p>
+          <h3>{error}</h3>
         </ErrorState>
       </Container>
     );
@@ -336,7 +330,7 @@ const FavoriteProducts = () => {
               <KeyboardCard key={keyboard.id}>
                 <LikesBadge
                   onClick={(e) => {
-                    e.stopPropagation(); // 카드 클릭 이벤트 전파 방지
+                    e.stopPropagation();
                     handleUnlike(keyboard.id);
                   }}
                 >

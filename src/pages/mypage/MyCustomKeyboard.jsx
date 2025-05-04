@@ -169,20 +169,6 @@ const EmptyState = styled.div`
   margin-top: 180px;
 `;
 
-const LikesBadge = styled.div`
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  background-color: rgba(0, 0, 0, 0.6);
-  color: white;
-  border-radius: 20px;
-  padding: 5px 10px;
-  font-size: 12px;
-  display: flex;
-  align-items: center;
-  z-index: 5;
-`;
-
 const ShareBadge = styled.div`
   position: absolute;
   top: 10px;
@@ -246,20 +232,6 @@ const Toast = styled.div`
   }
 `;
 
-const LikeIcon = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="red"
-    stroke="white"
-    strokeWidth="1"
-    style={{ marginRight: "4px" }}
-  >
-    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-  </svg>
-);
-
 const formatDate = (dateString) => {
   const date = new Date(dateString);
   return date.toLocaleDateString("ko-KR", {
@@ -270,7 +242,7 @@ const formatDate = (dateString) => {
 };
 
 const MyCustomKeyboard = () => {
-  const [keyboards, setKeyboards] = useState([]);
+  const [myKeyboards, setMyKeyboards] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [toast, setToast] = useState({
@@ -284,7 +256,7 @@ const MyCustomKeyboard = () => {
   const userEmail = user?.email || "";
 
   useEffect(() => {
-    const fetchKeyboards = async () => {
+    const fetchData = async () => {
       if (!userEmail) {
         setLoading(false);
         setError("로그인이 필요합니다.");
@@ -293,7 +265,8 @@ const MyCustomKeyboard = () => {
 
       try {
         setLoading(true);
-        const response = await axios.post(
+
+        const myKeyboardsResponse = await axios.post(
           "https://port-0-edcustom-lxx6l4ha4fc09fa0.sel5.cloudtype.app/items/find",
           { email: userEmail },
           {
@@ -303,60 +276,25 @@ const MyCustomKeyboard = () => {
           }
         );
 
+        // 내 키보드 목록 검증 및 저장
         if (
-          response.data &&
-          response.data.status === "OK" &&
-          Array.isArray(response.data.data)
+          myKeyboardsResponse.data &&
+          myKeyboardsResponse.data.status === "OK" &&
+          Array.isArray(myKeyboardsResponse.data.data)
         ) {
-          const myKeyboards = response.data.data;
-
-          const keyboardIds = myKeyboards.map((keyboard) => keyboard.id);
-
-          if (keyboardIds.length > 0) {
-            try {
-              const likesResponse = await axios.post(
-                "https://port-0-edcustom-lxx6l4ha4fc09fa0.sel5.cloudtype.app/checkliked",
-                { ids: keyboardIds },
-                {
-                  headers: {
-                    "Content-Type": "application/json;charset=UTF-8",
-                  },
-                }
-              );
-
-              if (
-                likesResponse.data &&
-                likesResponse.data.status === "OK" &&
-                Array.isArray(likesResponse.data.data)
-              ) {
-                const likesMap = {};
-                likesResponse.data.data.forEach((likeInfo) => {
-                  if (likeInfo.id) {
-                    likesMap[likeInfo.id] = likeInfo.likes || 0;
-                  }
-                });
-
-                const updatedKeyboards = myKeyboards.map((keyboard) => ({
-                  ...keyboard,
-                  likes: likesMap[keyboard.id] || keyboard.likes || 0,
-                }));
-
-                setKeyboards(updatedKeyboards);
-              } else {
-                setKeyboards(myKeyboards);
-              }
-            } catch (likesErr) {
-              console.error("좋아요 정보 가져오기 오류:", likesErr);
-              setKeyboards(myKeyboards);
-            }
-          } else {
-            setKeyboards(myKeyboards);
-          }
+          // 각 키보드에 isShared: false 속성 추가
+          const keyboardsWithShareProperty = myKeyboardsResponse.data.data.map(
+            (keyboard) => ({
+              ...keyboard,
+              isShared: false,
+            })
+          );
+          setMyKeyboards(keyboardsWithShareProperty);
         } else {
-          throw new Error("응답 형식이 올바르지 않습니다");
+          throw new Error("내 키보드 목록 응답 형식이 올바르지 않습니다");
         }
       } catch (err) {
-        console.error("키보드 목록 불러오기 오류:", err);
+        console.error("데이터 불러오기 오류:", err);
         setError(
           err.response?.data?.message || "데이터를 불러오는데 실패했습니다"
         );
@@ -365,7 +303,7 @@ const MyCustomKeyboard = () => {
       }
     };
 
-    fetchKeyboards();
+    fetchData();
   }, [userEmail]);
 
   const toastTimerRef = useRef(null);
@@ -401,6 +339,13 @@ const MyCustomKeyboard = () => {
       return;
     }
 
+    // 이미 공유된 키보드인지 확인
+    const isShared = keyboard.isShared;
+    if (isShared) {
+      showToast("이미 공유된 키보드입니다.", true);
+      return;
+    }
+
     setSharingKeyboardId(keyboard.id);
     showToast("키보드 공유 중...", true);
 
@@ -409,7 +354,7 @@ const MyCustomKeyboard = () => {
 
       const keyboardName = getKeyboardName(
         keyboard,
-        keyboards.indexOf(keyboard)
+        myKeyboards.indexOf(keyboard)
       );
 
       const jsonData = {
@@ -422,9 +367,6 @@ const MyCustomKeyboard = () => {
         switchcolor: keyboard.switchcolor || "string",
         imageUrl: keyboard.imageUrl || "string",
       };
-
-      console.log("공유할 키보드 데이터:", keyboard);
-      console.log("FormData에 추가할 JSON:", jsonData);
 
       formData.append(
         "DTO",
@@ -452,9 +394,14 @@ const MyCustomKeyboard = () => {
       }
 
       const result = await shareItem(formData);
-      console.log("API 응답:", result);
 
       if (result.success) {
+        setMyKeyboards((prev) =>
+          prev.map((item) =>
+            item.id === keyboard.id ? { ...item, isShared: true } : item
+          )
+        );
+
         showToast(`${keyboardName}이(가) 성공적으로 공유되었습니다!`, true);
       } else {
         throw new Error(result.message || "공유 중 오류가 발생했습니다.");
@@ -508,7 +455,7 @@ const MyCustomKeyboard = () => {
     );
   }
 
-  const hasKeyboards = keyboards.length > 0;
+  const hasKeyboards = myKeyboards.length > 0;
 
   return (
     <Container>
@@ -518,18 +465,24 @@ const MyCustomKeyboard = () => {
       {hasKeyboards ? (
         <VerticalScroll>
           <KeyboardGrid>
-            {keyboards.map((keyboard, index) => (
+            {myKeyboards.map((keyboard, index) => (
               <KeyboardCard key={keyboard.id}>
-                <LikesBadge>
-                  <LikeIcon /> {keyboard.likes || 0}
-                </LikesBadge>
-
                 <ShareBadge
                   onClick={(e) => handleShare(keyboard, e)}
-                  className={sharingKeyboardId === keyboard.id ? "sharing" : ""}
+                  className={
+                    sharingKeyboardId === keyboard.id
+                      ? "sharing"
+                      : keyboard.isShared
+                      ? "shared"
+                      : ""
+                  }
                 >
                   <FiShare2 size={14} />
-                  {sharingKeyboardId === keyboard.id ? "공유 중..." : "공유"}
+                  {sharingKeyboardId === keyboard.id
+                    ? "공유 중..."
+                    : keyboard.isShared
+                    ? "공유됨"
+                    : "공유"}
                 </ShareBadge>
 
                 <KeyboardImage image={keyboard.imageUrl}>
