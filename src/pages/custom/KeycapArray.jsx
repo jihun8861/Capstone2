@@ -1,87 +1,43 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState } from "react";
 import styled from "styled-components";
 import { HexColorPicker } from "react-colorful";
 
-// 스타일 컴포넌트
 const KeyboardContainer = styled.div`
   position: fixed;
   bottom: 0;
-  left: 0;
   width: 100%;
-  background-color: rgba(240, 240, 240, 0.95);
-  border-top: 1px solid #ccc;
-  padding: 15px 0;
+  background: rgba(255, 255, 255, 0.9);
   z-index: 10;
   display: flex;
   flex-direction: column;
   align-items: center;
-`;
-
-const Header = styled.div`
-  width: 100%;
-  display: flex;
-  justify-content: space-between;
-  padding: 0 20px;
-  margin-bottom: 15px;
-`;
-
-const Title = styled.h3`
-  margin: 0;
-`;
-
-const CloseButton = styled.button`
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 18px;
-  color: #333;
-  
-  &:hover {
-    color: #f00;
-  }
-`;
-
-const NavigationControls = styled.div`
-  display: flex;
-  align-items: center;
-  margin-bottom: 10px;
-  width: 90%;
-  justify-content: space-between;
-`;
-
-const RowIndicator = styled.span`
-  font-size: 14px;
-  color: #666;
+  justify-content: center;
+  padding: 10px 0;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
 `;
 
 const ArrowButton = styled.button`
   background: none;
   border: none;
-  font-size: 24px;
+  font-size: 32px;
   padding: 0 12px;
   cursor: pointer;
   color: #333;
-
+  
   &:hover {
     transform: scale(1.1);
-  }
-  
-  &:disabled {
-    color: #ccc;
-    cursor: not-allowed;
-    transform: none;
   }
 `;
 
 const RowWrapper = styled.div`
-  width: 90%;
+  flex: 1;
   display: flex;
   justify-content: center;
 `;
 
 const Row = styled.div`
   display: flex;
-  width: 100%;
+  width: 90%;
   margin: 10px 0;
 `;
 
@@ -89,7 +45,7 @@ const KeyCap = styled.div`
   flex: ${(props) => props.flex};
   height: 64px;
   background-color: ${(props) => props.color || "#e0e0e0"};
-  color: ${(props) => props.textColor || "#000"};
+  color: ${(props) => (props.isDark ? "#fff" : "#000")};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -97,336 +53,309 @@ const KeyCap = styled.div`
   margin: 0 1px;
   font-size: 14px;
   user-select: none;
-  transition: all 0.2s ease;
+  transition: transform 0.2s ease, background-color 0.3s ease;
   cursor: pointer;
-  position: relative;
-  box-shadow: 0 3px 5px rgba(0, 0, 0, 0.1);
-  border: ${(props) => props.selected ? "2px solid #007bff" : "2px solid transparent"};
-
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  
   &:hover {
     transform: translateY(-3px);
-    box-shadow: 0 5px 8px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  }
+  
+  &:active {
+    transform: translateY(-1px);
   }
 `;
 
-const KeyID = styled.span`
-  position: absolute;
-  top: 5px;
-  left: 5px;
-  font-size: 8px;
-  color: rgba(0, 0, 0, 0.6);
+const NavContainer = styled.div`
+  display: flex;
+  width: 100%;
+  justify-content: center;
+  align-items: center;
 `;
 
 const ColorPickerContainer = styled.div`
+  display: ${props => props.show ? 'flex' : 'none'};
   position: absolute;
-  right: 20px;
-  top: 70px;
-  background-color: white;
+  left: 20px;
+  bottom: 100px;
+  flex-direction: column;
+  align-items: center;
   padding: 15px;
+  background: white;
   border-radius: 8px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-  z-index: 100;
-  display: ${(props) => (props.visible ? "block" : "none")};
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  z-index: 20;
 `;
 
 const ColorPreview = styled.div`
-  margin-top: 10px;
   display: flex;
   align-items: center;
+  margin-top: 10px;
+  width: 100%;
 `;
 
 const ColorSwatch = styled.div`
   width: 24px;
   height: 24px;
   border-radius: 4px;
-  background-color: ${(props) => props.color};
+  background-color: ${props => props.color};
   margin-right: 10px;
-  border: 1px solid #ccc;
+  border: 1px solid #ddd;
+`;
+
+const ColorLabel = styled.span`
+  font-size: 14px;
+  margin-right: 10px;
 `;
 
 const ColorInput = styled.input`
   width: 80px;
-  padding: 4px;
-  border: 1px solid #ccc;
+  height: 24px;
+  border: 1px solid #ddd;
   border-radius: 4px;
+  padding: 0 5px;
 `;
 
-const ColorLabel = styled.span`
-  margin-right: 10px;
+const HeaderBar = styled.div`
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  padding: 0 20px;
+  align-items: center;
+  margin-bottom: 10px;
+`;
+
+const RowIndicator = styled.div`
   font-size: 14px;
-`;
-
-const ResetButton = styled.button`
-  margin-top: 10px;
-  padding: 5px 10px;
-  background-color: #f5f5f5;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  cursor: pointer;
-  
-  &:hover {
-    background-color: #e8e8e8;
-  }
-`;
-
-const ApplyButton = styled.button`
-  margin-top: 10px;
-  padding: 8px 15px;
-  background-color: #4CAF50;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
   font-weight: bold;
+`;
+
+const CloseButton = styled.button`
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #666;
   
   &:hover {
-    background-color: #45a049;
+    color: #000;
   }
 `;
 
-// 60% 키보드 레이아웃
-const layout = [
+// 60% 키보드의 키 배열 정의
+const layout60 = [
   {
     name: "Function Row",
     keys: [
-      { label: "ESC", id: "KeyEsc", w: 6 },
-      { label: "1", id: "Key1", w: 6 },
-      { label: "2", id: "Key2", w: 6 },
-      { label: "3", id: "Key3", w: 6 },
-      { label: "4", id: "Key4", w: 6 },
-      { label: "5", id: "Key5", w: 6 },
-      { label: "6", id: "Key6", w: 6 },
-      { label: "7", id: "Key7", w: 6 },
-      { label: "8", id: "Key8", w: 6 },
-      { label: "9", id: "Key9", w: 6 },
-      { label: "0", id: "Key0", w: 6 },
-      { label: "-", id: "KeyMinus", w: 6 },
-      { label: "=", id: "KeyEqual", w: 6 },
-      { label: "BACK", id: "KeyBackspace", w: 12 }
+      { label: "`~", id: "keycap_Grave", w: 6 }, 
+      { label: "1", id: "keycap_1", w: 6 }, 
+      { label: "2", id: "keycap_2", w: 6 }, 
+      { label: "3", id: "keycap_3", w: 6 },
+      { label: "4", id: "keycap_4", w: 6 }, 
+      { label: "5", id: "keycap_5", w: 6 }, 
+      { label: "6", id: "keycap_6", w: 6 }, 
+      { label: "7", id: "keycap_7", w: 6 },
+      { label: "8", id: "keycap_8", w: 6 }, 
+      { label: "9", id: "keycap_9", w: 6 }, 
+      { label: "0", id: "keycap_0", w: 6 }, 
+      { label: "-", id: "keycap_Minus", w: 6 },
+      { label: "=", id: "keycap_Equals", w: 6 }, 
+      { label: "BACK", id: "keycap_BackSpace", w: 12 }
     ]
   },
   {
-    name: "Number Row",
+    name: "Tab Row",
     keys: [
-      { label: "TAB", id: "KeyTab", w: 9 },
-      { label: "Q", id: "KeyQ", w: 6 },
-      { label: "W", id: "KeyW", w: 6 },
-      { label: "E", id: "KeyE", w: 6 },
-      { label: "R", id: "KeyR", w: 6 },
-      { label: "T", id: "KeyT", w: 6 },
-      { label: "Y", id: "KeyY", w: 6 },
-      { label: "U", id: "KeyU", w: 6 },
-      { label: "I", id: "KeyI", w: 6 },
-      { label: "O", id: "KeyO", w: 6 },
-      { label: "P", id: "KeyP", w: 6 },
-      { label: "[", id: "KeyBracketLeft", w: 6 },
-      { label: "]", id: "KeyBracketRight", w: 6 },
-      { label: "\\", id: "KeyBackslash", w: 9 }
+      { label: "TAB", id: "keycap_Tab", w: 9 }, 
+      { label: "Q", id: "keycap_Q", w: 6 }, 
+      { label: "W", id: "keycap_W", w: 6 }, 
+      { label: "E", id: "keycap_E", w: 6 },
+      { label: "R", id: "keycap_R", w: 6 }, 
+      { label: "T", id: "keycap_T", w: 6 }, 
+      { label: "Y", id: "keycap_Y", w: 6 }, 
+      { label: "U", id: "keycap_U", w: 6 },
+      { label: "I", id: "keycap_I", w: 6 }, 
+      { label: "O", id: "keycap_O", w: 6 }, 
+      { label: "P", id: "keycap_P", w: 6 }, 
+      { label: "[", id: "keycap_LeftBracket", w: 6 },
+      { label: "]", id: "keycap_RightBracket", w: 6 }, 
+      { label: "\\", id: "keycap_ReverseSlash", w: 9 }
     ]
   },
   {
-    name: "Home Row",
+    name: "Caps Row",
     keys: [
-      { label: "CAPS", id: "KeyCapsLock", w: 11 },
-      { label: "A", id: "KeyA", w: 6 },
-      { label: "S", id: "KeyS", w: 6 },
-      { label: "D", id: "KeyD", w: 6 },
-      { label: "F", id: "KeyF", w: 6 },
-      { label: "G", id: "KeyG", w: 6 },
-      { label: "H", id: "KeyH", w: 6 },
-      { label: "J", id: "KeyJ", w: 6 },
-      { label: "K", id: "KeyK", w: 6 },
-      { label: "L", id: "KeyL", w: 6 },
-      { label: ";", id: "KeySemicolon", w: 6 },
-      { label: "'", id: "KeyQuote", w: 6 },
-      { label: "ENTER", id: "KeyEnter", w: 13 }
+      { label: "CAPS", id: "keycap_CapsLock", w: 11 }, 
+      { label: "A", id: "keycap_A", w: 6 }, 
+      { label: "S", id: "keycap_S", w: 6 }, 
+      { label: "D", id: "keycap_D", w: 6 },
+      { label: "F", id: "keycap_F", w: 6 }, 
+      { label: "G", id: "keycap_G", w: 6 }, 
+      { label: "H", id: "keycap_H", w: 6 }, 
+      { label: "J", id: "keycap_J", w: 6 },
+      { label: "K", id: "keycap_K", w: 6 }, 
+      { label: "L", id: "keycap_L", w: 6 }, 
+      { label: ";", id: "keycap_Semicolon", w: 6 }, 
+      { label: "'", id: "keycap_Quote", w: 6 },
+      { label: "ENTER", id: "keycap_Enter", w: 13 }
+    ]
+  },
+  {
+    name: "Shift Row",
+    keys: [
+      { label: "SHIFT", id: "keycap_LShift", w: 14 }, 
+      { label: "Z", id: "keycap_Z", w: 6 }, 
+      { label: "X", id: "keycap_X", w: 6 }, 
+      { label: "C", id: "keycap_C", w: 6 },
+      { label: "V", id: "keycap_V", w: 6 }, 
+      { label: "B", id: "keycap_B", w: 6 }, 
+      { label: "N", id: "keycap_N", w: 6 }, 
+      { label: "M", id: "keycap_M", w: 6 },
+      { label: ",", id: "keycap_Comma", w: 6 }, 
+      { label: ".", id: "keycap_Dot", w: 6 }, 
+      { label: "/", id: "keycap_Slash", w: 6 }, 
+      { label: "SHIFT", id: "keycap_RShift", w: 14 }
     ]
   },
   {
     name: "Bottom Row",
     keys: [
-      { label: "SHIFT", id: "KeyShiftLeft", w: 14 },
-      { label: "Z", id: "KeyZ", w: 6 },
-      { label: "X", id: "KeyX", w: 6 },
-      { label: "C", id: "KeyC", w: 6 },
-      { label: "V", id: "KeyV", w: 6 },
-      { label: "B", id: "KeyB", w: 6 },
-      { label: "N", id: "KeyN", w: 6 },
-      { label: "M", id: "KeyM", w: 6 },
-      { label: ",", id: "KeyComma", w: 6 },
-      { label: ".", id: "KeyPeriod", w: 6 },
-      { label: "/", id: "KeySlash", w: 6 },
-      { label: "SHIFT", id: "KeyShiftRight", w: 14 }
-    ]
-  },
-  {
-    name: "Space Row",
-    keys: [
-      { label: "CTRL", id: "KeyControlLeft", w: 8 },
-      { label: "WIN", id: "KeyWin", w: 8 },
-      { label: "ALT", id: "KeyAltLeft", w: 8 },
-      { label: "SPACE", id: "KeySpace", w: 40 },
-      { label: "ALT", id: "KeyAltRight", w: 8 },
-      { label: "FN", id: "KeyFn", w: 8 },
-      { label: "MENU", id: "KeyMenu", w: 8 },
-      { label: "CTRL", id: "KeyControlRight", w: 8 }
+      { label: "CTRL", id: "keycap_LCtrl", w: 9 }, 
+      { label: "WIN", id: "keycap_Window", w: 9 }, 
+      { label: "ALT", id: "keycap_LAlt", w: 9 },
+      { label: "SPACE", id: "keycap_Space", w: 42 },
+      { label: "ALT", id: "keycap_RAlt", w: 9 }, 
+      { label: "FN", id: "keycap_Fn", w: 9 },
+      { label: "MENU", id: "keycap_Menu", w: 9 }, 
+      { label: "CTRL", id: "keycap_RCtrl", w: 9 }
     ]
   }
 ];
 
-const DEFAULT_KEYCAP_COLOR = "#e0e0e0";
+// 키보드 레이아웃 매핑 (다른 크기의 키보드 레이아웃을 추가할 수 있음)
+const keyboardLayouts = {
+  "60": layout60,
+  // 80% 및 100% 키보드 레이아웃은 필요에 따라 추가
+};
 
-export const KeycapArray = ({ size = "60", onClose, onKeycapColorsChange }) => {
+// 색상이 어두운지 확인하는 함수 (텍스트 색상 대비를 위해)
+const isColorDark = (hexColor) => {
+  // HEX를 RGB로 변환
+  const r = parseInt(hexColor.slice(1, 3), 16);
+  const g = parseInt(hexColor.slice(3, 5), 16);
+  const b = parseInt(hexColor.slice(5, 7), 16);
+  
+  // 색상 밝기 계산 (YIQ 공식)
+  return (r * 0.299 + g * 0.587 + b * 0.114) < 128;
+};
+
+export const KeycapArray = ({ size = "60", onClose, onKeycapColorChange, initialColors = {} }) => {
   const [currentRow, setCurrentRow] = useState(0);
-  const [selectedKey, setSelectedKey] = useState(null);
-  const [colorPickerVisible, setColorPickerVisible] = useState(false);
-  const [currentColor, setCurrentColor] = useState(DEFAULT_KEYCAP_COLOR);
-  // 키캡 색상을 ID별로 저장하는 상태
-  const [keycapColors, setKeycapColors] = useState({});
+  const [selectedKeycap, setSelectedKeycap] = useState(null);
+  const [currentColor, setCurrentColor] = useState("#e0e0e0");
+  const [showColorPicker, setShowColorPicker] = useState(false);
+  const [keycapColors, setKeycapColors] = useState(initialColors);
+  
+  // 키보드 크기에 맞는 레이아웃 선택
+  const layout = keyboardLayouts[size] || layout60;
 
-  // 키보드 사이즈에 따라 레이아웃 조정 (필요시)
-  const keyboardLayout = layout; // 60% 레이아웃만 사용 중
-
-  // 키를 선택하는 핸들러
-  const handleKeySelect = useCallback((key) => {
-    setSelectedKey(key);
-    setCurrentColor(keycapColors[key.id] || DEFAULT_KEYCAP_COLOR);
-    setColorPickerVisible(true);
-  }, [keycapColors]);
-
-  // 색상 변경 핸들러
-  const handleColorChange = useCallback((color) => {
-    setCurrentColor(color);
-  }, []);
-
-  // 선택된 키에 색상 적용
-  const applyColorToKey = useCallback(() => {
-    if (!selectedKey) return;
-    
-    setKeycapColors(prev => ({
-      ...prev,
-      [selectedKey.id]: currentColor
-    }));
-  }, [selectedKey, currentColor]);
-
-  // 모든 키캡 색상 초기화
-  const resetAllColors = () => {
-    setKeycapColors({});
-    setCurrentColor(DEFAULT_KEYCAP_COLOR);
-  };
-
-  // 선택한 키캡 색상만 초기화
-  const resetSelectedColor = () => {
-    if (!selectedKey) return;
-    
-    setKeycapColors(prev => {
-      const newColors = { ...prev };
-      delete newColors[selectedKey.id];
-      return newColors;
-    });
-    
-    setCurrentColor(DEFAULT_KEYCAP_COLOR);
-  };
-
-  // 선택한 색상 적용 후 부모 컴포넌트에 변경 사항 전달
-  const applyChanges = () => {
-    if (onKeycapColorsChange) {
-      onKeycapColorsChange(keycapColors);
-    }
-  };
-
-  // 행 간 이동 핸들러
+  // 이전 행으로 이동
   const handlePrev = () => {
     if (currentRow > 0) setCurrentRow(currentRow - 1);
   };
 
+  // 다음 행으로 이동
   const handleNext = () => {
-    if (currentRow < keyboardLayout.length - 1) 
+    if (currentRow < layout.length - 1) {
       setCurrentRow(currentRow + 1);
+    }
   };
 
-  // 키 색상이 텍스트 색상에 충분한 대비를 가지는지 확인
-  const getTextColor = (bgColor) => {
-    // HEX 색상을 RGB로 변환
-    const r = parseInt(bgColor.slice(1, 3), 16);
-    const g = parseInt(bgColor.slice(3, 5), 16);
-    const b = parseInt(bgColor.slice(5, 7), 16);
-    
-    // 밝기 계산 (YIQ 공식)
-    const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
-    
-    // 어두운 배경에는 밝은 텍스트, 밝은 배경에는 어두운 텍스트
-    return yiq >= 128 ? '#000000' : '#ffffff';
+  // 키캡 선택 시 색상 선택기 표시
+  const handleKeycapClick = (keycap) => {
+    setSelectedKeycap(keycap);
+    // 현재 키캡의 적용된 색상을 선택기에 설정 (없으면 기본값)
+    setCurrentColor(keycapColors[keycap.id] || "#e0e0e0");
+    setShowColorPicker(true);
   };
 
-  // 현재 행 정보
-  const currentRowData = keyboardLayout[currentRow];
+  // 색상 변경 처리
+  const handleColorChange = (color) => {
+    setCurrentColor(color);
+    
+    // 색상 변경 사항 저장
+    if (selectedKeycap) {
+      const updatedColors = {
+        ...keycapColors,
+        [selectedKeycap.id]: color
+      };
+      
+      setKeycapColors(updatedColors);
+      
+      // 부모 컴포넌트에 색상 변경 알림
+      if (onKeycapColorChange) {
+        onKeycapColorChange(selectedKeycap.id, color, updatedColors);
+      }
+    }
+  };
 
   return (
     <KeyboardContainer>
-      <Header>
-        <Title>키캡 커스터마이징</Title>
-        <CloseButton onClick={onClose}>✕</CloseButton>
-      </Header>
+      <HeaderBar>
+        <RowIndicator>{layout[currentRow].name} ({currentRow + 1}/{layout.length})</RowIndicator>
+        <CloseButton onClick={onClose}>×</CloseButton>
+      </HeaderBar>
       
-      <NavigationControls>
-        <ArrowButton onClick={handlePrev} disabled={currentRow === 0}>
-          &#9664;
-        </ArrowButton>
-        <RowIndicator>
-          {currentRowData.name} ({currentRow + 1}/{keyboardLayout.length})
-        </RowIndicator>
-        <ArrowButton 
-          onClick={handleNext} 
-          disabled={currentRow === keyboardLayout.length - 1}
-        >
-          &#9654;
-        </ArrowButton>
-      </NavigationControls>
+      <NavContainer>
+        <ArrowButton onClick={handlePrev} disabled={currentRow === 0}>〈</ArrowButton>
+        <RowWrapper>
+          <Row>
+            {layout[currentRow].keys.map((key, idx) => {
+              const keyColor = keycapColors[key.id] || "#e0e0e0";
+              const isDark = isColorDark(keyColor);
+              
+              return (
+                <KeyCap 
+                  key={idx} 
+                  flex={key.w}
+                  color={keyColor}
+                  isDark={isDark}
+                  onClick={() => handleKeycapClick(key)}
+                >
+                  {key.label}
+                </KeyCap>
+              );
+            })}
+          </Row>
+        </RowWrapper>
+        <ArrowButton onClick={handleNext} disabled={currentRow === layout.length - 1}>〉</ArrowButton>
+      </NavContainer>
       
-      <RowWrapper>
-        <Row>
-          {currentRowData.keys.map((key, idx) => (
-            <KeyCap 
-              key={idx} 
-              flex={key.w}
-              color={keycapColors[key.id] || DEFAULT_KEYCAP_COLOR}
-              textColor={getTextColor(keycapColors[key.id] || DEFAULT_KEYCAP_COLOR)}
-              selected={selectedKey && selectedKey.id === key.id}
-              onClick={() => handleKeySelect(key)}
-            >
-              <KeyID>{key.id}</KeyID>
-              {key.label}
-            </KeyCap>
-          ))}
-        </Row>
-      </RowWrapper>
-      
-      <ColorPickerContainer visible={colorPickerVisible && selectedKey}>
+      <ColorPickerContainer show={showColorPicker}>
         <HexColorPicker color={currentColor} onChange={handleColorChange} />
         <ColorPreview>
           <ColorSwatch color={currentColor} />
-          <ColorLabel>{selectedKey ? selectedKey.label : '키캡'} 색상:</ColorLabel>
+          <ColorLabel>{selectedKeycap ? selectedKeycap.label : ''} 색상:</ColorLabel>
           <ColorInput
             value={currentColor}
             onChange={(e) => {
               const hexRegex = /^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/;
-              if (hexRegex.test(e.target.value) || e.target.value.startsWith('#')) {
+              if (hexRegex.test(e.target.value)) {
                 handleColorChange(e.target.value);
+              } else if (e.target.value.startsWith("#") && e.target.value.length <= 7) {
+                setCurrentColor(e.target.value);
+              }
+            }}
+            onBlur={(e) => {
+              const hexRegex = /^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/;
+              if (!hexRegex.test(e.target.value)) {
+                setCurrentColor(currentColor);
               }
             }}
           />
         </ColorPreview>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px' }}>
-          <ResetButton onClick={resetSelectedColor}>초기화</ResetButton>
-          <ResetButton onClick={applyColorToKey}>적용</ResetButton>
-        </div>
       </ColorPickerContainer>
-      
-      <div style={{ marginTop: '20px', display: 'flex', gap: '10px' }}>
-        <ResetButton onClick={resetAllColors}>모든 색상 초기화</ResetButton>
-        <ApplyButton onClick={applyChanges}>변경사항 적용</ApplyButton>
-      </div>
     </KeyboardContainer>
   );
 };

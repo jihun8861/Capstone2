@@ -41,6 +41,49 @@ const SCREENSHOT_CAMERA_SETTINGS = {
   "100": { position: [-1.2, 9, 14], target: [-1.2, 0, 0] },
 };
 
+// 키캡 ID 목록 정의 (키보드 크기별로 다르게 설정 가능)
+const KEYCAP_IDS = {
+  "60": [
+    "keycap_Grave", "keycap_1", "keycap_2", "keycap_3", "keycap_4", "keycap_5", "keycap_6", "keycap_7", "keycap_8", "keycap_9", "keycap_0",
+    "keycap_Minus", "keycap_Equals", "keycap_BackSpace",
+  
+    "keycap_Tab", "keycap_Q", "keycap_W", "keycap_E", "keycap_R", "keycap_T", "keycap_Y", "keycap_U", "keycap_I", "keycap_O", "keycap_P",
+    "keycap_LeftBracket", "keycap_RightBracket", "keycap_ReverseSlash",
+  
+    "keycap_CapsLock", "keycap_A", "keycap_S", "keycap_D", "keycap_F", "keycap_G", "keycap_H", "keycap_J", "keycap_K", "keycap_L",
+    "keycap_Semicolon", "keycap_Quote", "keycap_Enter",
+  
+    "keycap_LShift", "keycap_Z", "keycap_X", "keycap_C", "keycap_V", "keycap_B", "keycap_N", "keycap_M",
+    "keycap_Comma", "keycap_Dot", "keycap_Slash", "keycap_RShift",
+  
+    "keycap_LCtrl", "keycap_Window", "keycap_LAlt", "keycap_Space", "keycap_RAlt", "keycap_Fn", "keycap_Menu", "keycap_RCtrl",
+
+  ]
+  ,
+  "80": [
+    "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", 
+    "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z",
+    "1", "2", "3", "4", "5", "6", "7", "8", "9", "0",
+    "ESC", "TAB", "CAPS", "SHIFT_L", "CTRL_L", "ALT_L", "SPACE", "ALT_R", "CTRL_R", "SHIFT_R",
+    "ENTER", "BACKSPACE", "TILDE", "MINUS", "EQUALS", "BRACKET_L", "BRACKET_R", "BACKSLASH", 
+    "SEMICOLON", "QUOTE", "COMMA", "PERIOD", "SLASH", "FN",
+    "ARROW_UP", "ARROW_DOWN", "ARROW_LEFT", "ARROW_RIGHT",
+    "INS", "HOME", "PGUP", "DEL", "END", "PGDN"
+  ],
+  "100": [
+    "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", 
+    "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z",
+    "1", "2", "3", "4", "5", "6", "7", "8", "9", "0",
+    "ESC", "TAB", "CAPS", "SHIFT_L", "CTRL_L", "ALT_L", "SPACE", "ALT_R", "CTRL_R", "SHIFT_R",
+    "ENTER", "BACKSPACE", "TILDE", "MINUS", "EQUALS", "BRACKET_L", "BRACKET_R", "BACKSLASH", 
+    "SEMICOLON", "QUOTE", "COMMA", "PERIOD", "SLASH", "FN",
+    "ARROW_UP", "ARROW_DOWN", "ARROW_LEFT", "ARROW_RIGHT",
+    "INS", "HOME", "PGUP", "DEL", "END", "PGDN",
+    "NUM_LOCK", "NUM_DIVIDE", "NUM_MULTIPLY", "NUM_SUBTRACT", "NUM_ADD", "NUM_ENTER", "NUM_DOT",
+    "NUM_0", "NUM_1", "NUM_2", "NUM_3", "NUM_4", "NUM_5", "NUM_6", "NUM_7", "NUM_8", "NUM_9"
+  ]
+};
+
 const KeyboardPart = ({
   modelPath,
   index,
@@ -51,14 +94,12 @@ const KeyboardPart = ({
   visible = true,
   color = null,
   centerOffset,
-  keycapColors = null, // 키캡 색상 맵 추가
 }) => {
   const { scene } = useGLTF(modelPath);
   const modelRef = useRef();
   const isTopCase = modelPath.includes("5.TopCase.glb");
   const isTopSwitch = modelPath.includes("TopSwitchs.glb");
-  const isEngraving = modelPath.includes("Engraving.glb");
-  const isKeycaps = modelPath.includes("Keycaps.glb");
+  const isKeycap = partType === "keycap";
 
   useEffect(() => {
     scene.traverse((child) => {
@@ -71,8 +112,7 @@ const KeyboardPart = ({
           child.castShadow = true;
         }
   
-        // TopCase 또는 TopSwitch의 경우 단일 색상 적용
-        if ((isTopCase || isTopSwitch) && color) {
+        if ((isTopCase || isTopSwitch || isKeycap) && color) {
           const originalMaterial = child.material;
           const newMaterial = new THREE.MeshStandardMaterial({
             color: new THREE.Color(color),
@@ -80,45 +120,6 @@ const KeyboardPart = ({
             metalness: originalMaterial?.metalness ?? 0.3,
           });
           child.material = newMaterial;
-        }
-        
-        // 키캡의 경우 개별 메시에 색상 적용
-        if (isKeycaps && keycapColors) {
-          // 메시 이름에서 키캡 식별자 추출 (예: "KeyA", "KeyB" 등)
-          const keycapId = child.name;
-          
-          // 해당 키캡에 대한 색상이 있으면 적용
-          if (keycapColors[keycapId]) {
-            const originalMaterial = child.material;
-            const newMaterial = new THREE.MeshStandardMaterial({
-              color: new THREE.Color(keycapColors[keycapId]),
-              roughness: originalMaterial?.roughness ?? 0.5,
-              metalness: originalMaterial?.metalness ?? 0.3,
-            });
-            child.material = newMaterial;
-          } else if (color) {
-            // 기본 색상 적용 (모든 키캡에 동일한 색상)
-            const originalMaterial = child.material;
-            const newMaterial = new THREE.MeshStandardMaterial({
-              color: new THREE.Color(color),
-              roughness: originalMaterial?.roughness ?? 0.5,
-              metalness: originalMaterial?.metalness ?? 0.3,
-            });
-            child.material = newMaterial;
-          }
-        }
-        
-        // 각인(Engraving) 모델의 가시성 개선
-        if (isEngraving) {
-          const engravingMaterial = new THREE.MeshStandardMaterial({
-            color: new THREE.Color(0x000000), // 검은색으로 변경
-            roughness: 0.6, // 반사를 줄이기 위해 roughness 증가
-            metalness: 0.0, // 금속성을 제거하여 반사 감소
-            emissive: new THREE.Color(0x000000),
-            emissiveIntensity: 0.5,
-          });
-          child.material = engravingMaterial;
-          child.renderOrder = 999; // 렌더링 순서를 높여 다른 요소보다 앞에 그려지도록 함
         }
       }
     });
@@ -130,7 +131,7 @@ const KeyboardPart = ({
   
     // 중심점을 원점으로 맞추기
     scene.position.sub(center);
-  }, [scene, color, keycapColors, isTopCase, isTopSwitch, isKeycaps, isEngraving]);
+  }, [scene, color, isTopCase, isTopSwitch, isKeycap]);
   
 
   useFrame(() => {
@@ -168,9 +169,14 @@ const KeyboardPart = ({
       } else {
         const initialPos = KEYBOARD_POSITIONS.getInitialPosition(
           size,
-          partType
+          partType,
+          index
         );
-        const finalPos = KEYBOARD_POSITIONS.getFinalPosition(size, partType);
+        const finalPos = KEYBOARD_POSITIONS.getFinalPosition(
+          size, 
+          partType,
+          index
+        );
 
         // 중심점 오프셋 적용
         modelRef.current.position.x = initialPos[0] + centerOffset.x;
@@ -190,7 +196,6 @@ const KeyboardPart = ({
 };
 
 const ScreenshotHandler = forwardRef(({ children, size }, ref) => {
-  // 수정된 ScreenshotHandler 컴포넌트
   const { gl, scene, camera } = useThree();
 
   useImperativeHandle(ref, () => ({
@@ -276,14 +281,7 @@ const KeyboardOrbitControls = ({ resetCamera, cameraSettings }) => {
   );
 };
 
-const Model = ({ 
-  size, 
-  selectedModel, 
-  baseColor, 
-  switchColor, 
-  resetStatus,
-  keycapColors = {} // 키캡 색상 맵 추가
-}) => {
+const Model = ({ size, selectedModel, baseColor, switchColor, resetStatus, keycapColors = {} }) => {
   const [baseAnimationProgress, setBaseAnimationProgress] = useState(0);
   const [switchAnimationProgress, setSwitchAnimationProgress] = useState(0);
   const [keycapAnimationProgress, setKeycapAnimationProgress] = useState(0);
@@ -380,8 +378,10 @@ const Model = ({
 
   const BOTTOM_SWITCH_MODEL_PATH = `/keyboard/${size}keyboard/${size}BottomSwitchs.glb`;
   const TOP_SWITCH_MODEL_PATH = `/keyboard/${size}keyboard/${size}TopSwitchs.glb`;
-  const KEYCAP_MODEL_PATH = `/keyboard/${size}keyboard/${size}Keycaps.glb`;
-  const ENGRAVING_MODEL_PATH = `/keyboard/${size}keyboard/${size}Engraving.glb`; // 각인 모델 경로 추가
+  const ENGRAVING_MODEL_PATH = `/keyboard/${size}keyboard/${size}Engraving.glb`;
+
+  // 키캡 아이디 목록 가져오기
+  const keycapIds = KEYCAP_IDS[size] || KEYCAP_IDS["100"];
 
   useEffect(() => {
     if (selectedModel === "switch" && !showSwitch) {
@@ -499,18 +499,20 @@ const Model = ({
         </>
       )}
 
-      {showKeycap && (
+      {/* 개별 키캡 모델 렌더링 */}
+      {showKeycap && keycapIds.map((keycapId, index) => (
         <KeyboardPart
-          key="keycaps"
-          modelPath={KEYCAP_MODEL_PATH}
+          key={`keycap-${keycapId}`}
+          modelPath={`/keyboard/${size}keyboard/${size}keycaps/${keycapId}.glb`}
+          index={index}
           animationProgress={keycapAnimationProgress}
           scale={scale}
           partType="keycap"
           size={size}
+          color={keycapColors[keycapId] || null} // 개별 키캡 색상 적용
           centerOffset={centerOffset}
-          keycapColors={keycapColors} // 키캡 색상 맵 전달
         />
-      )}
+      ))}
 
       {/* 각인 모델 추가 */}
       {showEngraving && (
@@ -548,13 +550,7 @@ const ShadowLimiter = () => {
 };
 
 export const ThreeDModel = forwardRef(
-  ({ 
-    size, 
-    selectedModel, 
-    baseColor, 
-    switchColor, 
-    keycapColors = {} // 키캡 색상 맵 추가
-  }, ref) => {
+  ({ size, selectedModel, baseColor, switchColor, keycapColors = {} }, ref) => {
     const { size: urlSize } = useParams();
     const keyboardSize = size || urlSize || "100";
     const validSize = ["60", "80", "100"].includes(keyboardSize)
@@ -583,7 +579,12 @@ export const ThreeDModel = forwardRef(
         return null;
       },
       // 다시 시작하기 기능 추가
-      resetModel: resetKeyboardModel
+      resetModel: resetKeyboardModel,
+      // 특정 키캡 색상 변경 함수 추가 (외부에서 호출 가능)
+      updateKeycapColor: (keycapId, color) => {
+        // 여기서는 직접적인 업데이트를 할 수 없으므로 부모 컴포넌트에서 keycapColors 상태를 관리해야 함
+        console.log(`Keycap ${keycapId} color updated to ${color}`);
+      }
     }));
 
     // 선택된 키보드 크기에 맞는 카메라 설정
@@ -599,10 +600,10 @@ export const ThreeDModel = forwardRef(
           }}
         >
           <ScreenshotHandler ref={screenshotRef} size={validSize}>
-            <ambientLight intensity={1.8} /> {/* 전체 환경 조명 밝기 약간 낮춤 */}
+            <ambientLight intensity={2.2} />
             <directionalLight
               position={[0, 20, 0]}
-              intensity={3.5} /* 상단 조명 강도 낮춤 */
+              intensity={5.0}
               castShadow
               shadow-camera-left={-5}
               shadow-camera-right={5}
@@ -613,19 +614,19 @@ export const ThreeDModel = forwardRef(
 
             <directionalLight
               position={[5, 5, 5]}
-              intensity={1.5} /* 측면 조명 강도 낮춤 */
+              intensity={2.0}
               castShadow={false}
             />
 
             <directionalLight
               position={[-5, 5, 5]}
-              intensity={1.5} /* 측면 조명 강도 낮춤 */
+              intensity={2.0}
               castShadow={false}
             />
 
             <directionalLight
               position={[0, 5, -5]}
-              intensity={1.0} /* 후면 조명 강도 낮춤 */
+              intensity={1.5}
               castShadow={false}
             />
 
@@ -640,8 +641,8 @@ export const ThreeDModel = forwardRef(
               selectedModel={selectedModel}
               baseColor={baseColor}
               switchColor={switchColor}
-              keycapColors={keycapColors} // 키캡 색상 맵 전달
               resetStatus={resetStatus}
+              keycapColors={keycapColors}
             />
           </ScreenshotHandler>
         </Canvas>

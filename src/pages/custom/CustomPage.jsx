@@ -220,6 +220,9 @@ export const CustomPage = () => {
   
   // 키캡 배열 컴포넌트 표시 상태
   const [showKeycapArray, setShowKeycapArray] = useState(false);
+  
+  // 키캡 색상 상태 관리 - 키 ID를 색상에 매핑
+  const [keycapColors, setKeycapColors] = useState({});
 
   const handleModelSelect = (modelType) => {
     setPrevSelectedModel(selectedModel);
@@ -242,6 +245,17 @@ export const CustomPage = () => {
   const handleSwitchColorSelect = (color) => {
     setSwitchColor(color);
   };
+  
+  // 키캡 색상 변경 핸들러
+  const handleKeycapColorChange = (keycapId, color, allColors) => {
+    // 전체 키캡 색상 상태 업데이트
+    setKeycapColors(allColors || { ...keycapColors, [keycapId]: color });
+    
+    // 3D 모델에 키캡 색상 변경 적용 (필요한 경우)
+    if (modelRef.current && modelRef.current.updateKeycapColor) {
+      modelRef.current.updateKeycapColor(keycapId, color);
+    }
+  };
 
   const handleRestart = () => {
     if (modelRef.current && modelRef.current.getScreenshot) {
@@ -255,9 +269,25 @@ export const CustomPage = () => {
   // 다시 시작하기 확인 처리
   const handleConfirmRestart = () => {
     setRestartModalOpen(false);
-    // 색상 초기화 추가
+    
+    // 색상 초기화
     setBaseColor("#ffffff");
-    window.location.reload();
+    setSwitchColor("#ffffff");
+    setKeycapColors({});
+    setSelectedModel("barebone");
+    setShowKeycapArray(false);
+    setShowColorPicker(false);
+    
+    // localStorage 및 sessionStorage에서 관련 데이터 제거
+    localStorage.removeItem("customKeyboardColors");
+    localStorage.removeItem("customKeyboardState");
+    sessionStorage.removeItem("customKeyboardColors");
+    sessionStorage.removeItem("customKeyboardState");
+    
+    // 모델 리셋
+    if (modelRef.current && modelRef.current.resetModel) {
+      modelRef.current.resetModel();
+    }
   };
 
   const handleSaveClick = async () => {
@@ -304,8 +334,7 @@ export const CustomPage = () => {
       title: designTitle, // 제목 정보 추가
       barebonecolor: baseColor,
       keyboardtype: size,
-      keycapcolor: "test",
-      design: "test",
+      keycapcolors: keycapColors, // 키캡 색상 정보를 객체로 저장
       switchcolor: switchColor, // 스위치 색상 정보 업데이트
     };
 
@@ -446,7 +475,8 @@ export const CustomPage = () => {
             selectedModel={selectedModel === "barebone" ? null : selectedModel}
             prevSelectedModel={prevSelectedModel}
             baseColor={baseColor}
-            switchColor={switchColor} // 스위치 색상 전달
+            switchColor={switchColor}
+            keycapColors={keycapColors} // 키캡 색상 정보 전달
           />
         </ThreeDContainer>
       </CustomFrame>
@@ -486,6 +516,8 @@ export const CustomPage = () => {
         <KeycapArray 
           size={size || "60"} 
           onClose={() => setShowKeycapArray(false)}
+          onKeycapColorChange={handleKeycapColorChange}
+          initialColors={keycapColors}
         />
       )}
     </Container>
