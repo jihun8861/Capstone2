@@ -65,14 +65,13 @@ const SelectContainer = styled.div`
   display: flex;
   width: 15%;
   height: 100%;
-  border: solid 1px;
+  margin-left: 30px;
 `;
 
 const ThreeDContainer = styled.div`
   display: flex;
   width: 85%;
   height: 100%;
-  border: solid 1px;
   position: relative;
   overflow: hidden;
   justify-content: center;
@@ -223,6 +222,12 @@ export const CustomPage = () => {
   
   // 키캡 색상 상태 관리 - 키 ID를 색상에 매핑
   const [keycapColors, setKeycapColors] = useState({});
+  
+  // 리셋 카운터 - 모델 강제 리렌더링을 위함
+  const [resetCounter, setResetCounter] = useState(0);
+  
+  // KeycapArray 컴포넌트 리렌더링을 위한 키
+  const [keycapArrayKey, setKeycapArrayKey] = useState(0);
 
   const handleModelSelect = (modelType) => {
     setPrevSelectedModel(selectedModel);
@@ -266,28 +271,41 @@ export const CustomPage = () => {
     setRestartModalOpen(true);
   };
 
-  // 다시 시작하기 확인 처리
+  // 다시 시작하기 확인 처리 - 완전히 초기화하고 모델 리렌더링
   const handleConfirmRestart = () => {
     setRestartModalOpen(false);
     
     // 색상 초기화
     setBaseColor("#ffffff");
     setSwitchColor("#ffffff");
-    setKeycapColors({});
+    setKeycapColors({});  // 키캡 색상 상태 초기화
     setSelectedModel("barebone");
     setShowKeycapArray(false);
     setShowColorPicker(false);
     
-    // localStorage 및 sessionStorage에서 관련 데이터 제거
+    // KeycapArray 컴포넌트 리렌더링을 위한 키 업데이트
+    setKeycapArrayKey(prev => prev + 1);
+    
+    // 모델 리셋 및 강제 리렌더링
+    if (modelRef.current) {
+      // resetModel 함수가 있으면 실행
+      if (modelRef.current.resetModel) {
+        modelRef.current.resetModel();
+      }
+      
+      // 모든 키캡 색상 초기화
+      if (modelRef.current.resetAllKeycapColors) {
+        modelRef.current.resetAllKeycapColors();
+      }
+    }
+    
+    // 리셋 카운터를 증가시켜 모델 컴포넌트 강제 리렌더링
+    setResetCounter(prevCount => prevCount + 1);
+  
     localStorage.removeItem("customKeyboardColors");
     localStorage.removeItem("customKeyboardState");
     sessionStorage.removeItem("customKeyboardColors");
     sessionStorage.removeItem("customKeyboardState");
-    
-    // 모델 리셋
-    if (modelRef.current && modelRef.current.resetModel) {
-      modelRef.current.resetModel();
-    }
   };
 
   const handleSaveClick = async () => {
@@ -389,6 +407,14 @@ export const CustomPage = () => {
       console.log(`선택된 모델: ${selectedModel}, 사이즈: ${size}`);
     }
   }, [selectedModel, size]);
+  
+  // 컴포넌트 마운트 시점에 초기화 실행 (필요한 경우)
+  useEffect(() => {
+    // 최초 마운트 시 모든 상태 초기화
+    setBaseColor("#ffffff");
+    setSwitchColor("#ffffff");
+    setKeycapColors({});
+  }, []);
 
   return (
     <Container>
@@ -470,6 +496,7 @@ export const CustomPage = () => {
 
         <ThreeDContainer>
           <ThreeDModel
+            key={`model-${resetCounter}`} // 강제 리렌더링을 위한 키 추가
             ref={modelRef}
             size={size}
             selectedModel={selectedModel === "barebone" ? null : selectedModel}
@@ -514,6 +541,7 @@ export const CustomPage = () => {
       {/* 키캡 선택 시에만 KeycapArray 컴포넌트 표시 */}
       {showKeycapArray && (
         <KeycapArray 
+          key={`keycap-array-${keycapArrayKey}`} // 키캡 배열 강제 리렌더링을 위한 키 추가
           size={size || "60"} 
           onClose={() => setShowKeycapArray(false)}
           onKeycapColorChange={handleKeycapColorChange}

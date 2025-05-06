@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 import { HexColorPicker } from "react-colorful";
 
@@ -56,6 +56,10 @@ const KeyCap = styled.div`
   transition: transform 0.2s ease, background-color 0.3s ease;
   cursor: pointer;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  
+  /* 선택된 키캡 스타일 */
+  outline: ${(props) => props.isSelected ? "3px solid #4a90e2" : "none"};
+  transform: ${(props) => props.isSelected ? "translateY(-3px)" : "none"};
   
   &:hover {
     transform: translateY(-3px);
@@ -260,6 +264,10 @@ export const KeycapArray = ({ size = "60", onClose, onKeycapColorChange, initial
   // 키보드 크기에 맞는 레이아웃 선택
   const layout = keyboardLayouts[size] || layout60;
 
+  useEffect(() => {
+    setKeycapColors(initialColors);
+  }, [initialColors]);
+
   // 이전 행으로 이동
   const handlePrev = () => {
     if (currentRow > 0) setCurrentRow(currentRow - 1);
@@ -314,6 +322,7 @@ export const KeycapArray = ({ size = "60", onClose, onKeycapColorChange, initial
             {layout[currentRow].keys.map((key, idx) => {
               const keyColor = keycapColors[key.id] || "#e0e0e0";
               const isDark = isColorDark(keyColor);
+              const isSelected = selectedKeycap && selectedKeycap.id === key.id;
               
               return (
                 <KeyCap 
@@ -321,6 +330,7 @@ export const KeycapArray = ({ size = "60", onClose, onKeycapColorChange, initial
                   flex={key.w}
                   color={keyColor}
                   isDark={isDark}
+                  isSelected={isSelected}
                   onClick={() => handleKeycapClick(key)}
                 >
                   {key.label}

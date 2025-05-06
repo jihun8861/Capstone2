@@ -8,7 +8,7 @@ import React, {
 import styled from "styled-components";
 import { KEYBOARD_POSITIONS } from "../../data/keyboardPositions";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { useParams } from "react-router-dom";
+import { useParams, useLocation } from "react-router-dom";
 import { OrbitControls, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 
@@ -281,6 +281,35 @@ const KeyboardOrbitControls = ({ resetCamera, cameraSettings }) => {
   );
 };
 
+// 세션 스토리지에 키캡 색상 정보를 저장하는 함수
+const saveKeycapColorsToSession = (size, keycapColors) => {
+  try {
+    sessionStorage.setItem(`keycapColors_${size}`, JSON.stringify(keycapColors));
+  } catch (e) {
+    console.error("Failed to save keycap colors to session storage:", e);
+  }
+};
+
+// 세션 스토리지에서 키캡 색상 정보를 가져오는 함수
+const getKeycapColorsFromSession = (size) => {
+  try {
+    const colors = sessionStorage.getItem(`keycapColors_${size}`);
+    return colors ? JSON.parse(colors) : {};
+  } catch (e) {
+    console.error("Failed to get keycap colors from session storage:", e);
+    return {};
+  }
+};
+
+// 세션 스토리지에서 키캡 색상 정보를 제거하는 함수
+const clearKeycapColorsFromSession = (size) => {
+  try {
+    sessionStorage.removeItem(`keycapColors_${size}`);
+  } catch (e) {
+    console.error("Failed to clear keycap colors from session storage:", e);
+  }
+};
+
 const Model = ({ size, selectedModel, baseColor, switchColor, resetStatus, keycapColors = {} }) => {
   const [baseAnimationProgress, setBaseAnimationProgress] = useState(0);
   const [switchAnimationProgress, setSwitchAnimationProgress] = useState(0);
@@ -289,6 +318,7 @@ const Model = ({ size, selectedModel, baseColor, switchColor, resetStatus, keyca
   const [showSwitch, setShowSwitch] = useState(false);
   const [showKeycap, setShowKeycap] = useState(false);
   const [showEngraving, setShowEngraving] = useState(false);
+  const [currentKeycapColors, setCurrentKeycapColors] = useState(keycapColors);
   const groupRef = useRef();
   const scale = KEYBOARD_POSITIONS.getScale(size);
   
@@ -299,6 +329,12 @@ const Model = ({ size, selectedModel, baseColor, switchColor, resetStatus, keyca
   const switchAnimationExecuted = useRef({});
   const keycapAnimationExecuted = useRef({});
   const engravingAnimationExecuted = useRef({});
+
+  // keycapColors prop이 변경되면 currentKeycapColors 상태를 업데이트하고 세션 스토리지에 저장
+  useEffect(() => {
+    setCurrentKeycapColors(keycapColors);
+    saveKeycapColorsToSession(size, keycapColors);
+  }, [keycapColors, size]);
 
   // 다시 시작하기 효과를 위한 리셋 함수
   useEffect(() => {
@@ -320,12 +356,16 @@ const Model = ({ size, selectedModel, baseColor, switchColor, resetStatus, keyca
       setShowKeycap(false);
       setShowEngraving(false);
 
+      // 키캡 색상 초기화
+      setCurrentKeycapColors({});
+      clearKeycapColorsFromSession(size);
+
       // 애니메이션 다시 시작
       setTimeout(() => {
         animateBaseParts();
       }, 500);
     }
-  }, [resetStatus]);
+  }, [resetStatus, size]);
 
   // 사이즈 변경 시 상태 초기화
   useEffect(() => {
@@ -340,6 +380,10 @@ const Model = ({ size, selectedModel, baseColor, switchColor, resetStatus, keyca
     setShowSwitch(false);
     setShowKeycap(false);
     setShowEngraving(false);
+    
+    // 사이즈 변경 시 해당 사이즈의 저장된 키캡 색상 정보를 가져옴
+    const savedColors = getKeycapColorsFromSession(size);
+    setCurrentKeycapColors(savedColors);
   }, [size]);
 
   // 기본 파트 애니메이션 함수
@@ -509,7 +553,7 @@ const Model = ({ size, selectedModel, baseColor, switchColor, resetStatus, keyca
           scale={scale}
           partType="keycap"
           size={size}
-          color={keycapColors[keycapId] || null} // 개별 키캡 색상 적용
+          color={currentKeycapColors[keycapId] || null} // 현재 키캡 색상 적용
           centerOffset={centerOffset}
         />
       ))}
@@ -552,6 +596,7 @@ const ShadowLimiter = () => {
 export const ThreeDModel = forwardRef(
   ({ size, selectedModel, baseColor, switchColor, keycapColors = {} }, ref) => {
     const { size: urlSize } = useParams();
+    const location = useLocation();
     const keyboardSize = size || urlSize || "100";
     const validSize = ["60", "80", "100"].includes(keyboardSize)
       ? keyboardSize
@@ -559,11 +604,62 @@ export const ThreeDModel = forwardRef(
     const screenshotRef = useRef();
     const [resetStatus, setResetStatus] = useState(false);
     const [resetCamera, setResetCamera] = useState(false);
+    const [internalKeycapColors, setInternalKeycapColors] = useState({});
+    
+    // 컴포넌트 마운트 시 세션 스토리지에서 키캡 색상 정보 로드
+    useEffect(() => {
+      const savedColors = getKeycapColorsFromSession(validSize);
+      setInternalKeycapColors(savedColors);
+    }, [validSize]);
+
+    // 페이지 변경 감지 및 세션 스토리지 초기화
+    useEffect(() => {
+      // 페이지 변경 이벤트 리스너
+      const handlePageChange = () => {
+        clearKeycapColorsFromSession(validSize);
+        setInternalKeycapColors({});
+      };
+
+      // 브라우저 창이 닫힐 때 세션 스토리지 초기화
+      const handleBeforeUnload = () => {
+        clearKeycapColorsFromSession(validSize);
+      };
+
+      // 이벤트 리스너 등록
+      window.addEventListener('beforeunload', handleBeforeUnload);
+      
+      // 위치 변경 시 이전 페이지 정보 저장
+      const prevPath = location.pathname;
+      
+      // 컴포넌트 언마운트 또는 위치 변경 시 클린업
+      return () => {
+        window.removeEventListener('beforeunload', handleBeforeUnload);
+        
+        // 라우트가 변경되면 세션 스토리지 초기화
+        if (location.pathname !== prevPath) {
+          handlePageChange();
+        }
+      };
+    }, [validSize, location]);
+
+    // 키캡 색상 업데이트 함수
+    const updateKeycapColor = (keycapId, color) => {
+      const newColors = { ...internalKeycapColors, [keycapId]: color };
+      setInternalKeycapColors(newColors);
+      saveKeycapColorsToSession(validSize, newColors);
+    };
+
+    // 모든 키캡 색상 초기화 함수
+    const resetKeycapColors = () => {
+      setInternalKeycapColors({});
+      clearKeycapColorsFromSession(validSize);
+    };
 
     // 리셋 함수 구현
     const resetKeyboardModel = () => {
       setResetStatus(prev => !prev); // 토글하여 useEffect 트리거
       setResetCamera(true);
+      resetKeycapColors(); // 키캡 색상 초기화 추가
       
       // 카메라 리셋 후 상태 복원
       setTimeout(() => {
@@ -580,11 +676,10 @@ export const ThreeDModel = forwardRef(
       },
       // 다시 시작하기 기능 추가
       resetModel: resetKeyboardModel,
+      // 키캡 색상 초기화 함수 추가
+      resetKeycapColors: resetKeycapColors,
       // 특정 키캡 색상 변경 함수 추가 (외부에서 호출 가능)
-      updateKeycapColor: (keycapId, color) => {
-        // 여기서는 직접적인 업데이트를 할 수 없으므로 부모 컴포넌트에서 keycapColors 상태를 관리해야 함
-        console.log(`Keycap ${keycapId} color updated to ${color}`);
-      }
+      updateKeycapColor: updateKeycapColor
     }));
 
     // 선택된 키보드 크기에 맞는 카메라 설정
