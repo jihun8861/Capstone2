@@ -1,7 +1,7 @@
 import styled from "styled-components";
 import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
-import { FiRefreshCw, FiShare2, FiSave, FiX } from "react-icons/fi";
+import { FiRefreshCw, FiShare2, FiSave } from "react-icons/fi";
 import { ThreeDModel } from "../../components/model/ThreeDModel";
 import { ColorSelect } from "../../color/ColorSelect";
 import { KeycapArray } from "./KeycapArray";
@@ -222,12 +222,6 @@ export const CustomPage = () => {
   
   // 키캡 색상 상태 관리 - 키 ID를 색상에 매핑
   const [keycapColors, setKeycapColors] = useState({});
-  
-  // 리셋 카운터 - 모델 강제 리렌더링을 위함
-  const [resetCounter, setResetCounter] = useState(0);
-  
-  // KeycapArray 컴포넌트 리렌더링을 위한 키
-  const [keycapArrayKey, setKeycapArrayKey] = useState(0);
 
   const handleModelSelect = (modelType) => {
     setPrevSelectedModel(selectedModel);
@@ -272,41 +266,12 @@ export const CustomPage = () => {
   };
 
   // 다시 시작하기 확인 처리 - 완전히 초기화하고 모델 리렌더링
-  const handleConfirmRestart = () => {
-    setRestartModalOpen(false);
-    
-    // 색상 초기화
-    setBaseColor("#ffffff");
-    setSwitchColor("#ffffff");
-    setKeycapColors({});  // 키캡 색상 상태 초기화
-    setSelectedModel("barebone");
-    setShowKeycapArray(false);
-    setShowColorPicker(false);
-    
-    // KeycapArray 컴포넌트 리렌더링을 위한 키 업데이트
-    setKeycapArrayKey(prev => prev + 1);
-    
-    // 모델 리셋 및 강제 리렌더링
-    if (modelRef.current) {
-      // resetModel 함수가 있으면 실행
-      if (modelRef.current.resetModel) {
-        modelRef.current.resetModel();
-      }
-      
-      // 모든 키캡 색상 초기화
-      if (modelRef.current.resetAllKeycapColors) {
-        modelRef.current.resetAllKeycapColors();
-      }
-    }
-    
-    // 리셋 카운터를 증가시켜 모델 컴포넌트 강제 리렌더링
-    setResetCounter(prevCount => prevCount + 1);
+const handleConfirmRestart = () => {
+  setRestartModalOpen(false);
   
-    localStorage.removeItem("customKeyboardColors");
-    localStorage.removeItem("customKeyboardState");
-    sessionStorage.removeItem("customKeyboardColors");
-    sessionStorage.removeItem("customKeyboardState");
-  };
+  // 페이지 새로고침 실행
+  window.location.reload();
+};
 
   const handleSaveClick = async () => {
     if (!user?.email) {
@@ -496,7 +461,6 @@ export const CustomPage = () => {
 
         <ThreeDContainer>
           <ThreeDModel
-            key={`model-${resetCounter}`} // 강제 리렌더링을 위한 키 추가
             ref={modelRef}
             size={size}
             selectedModel={selectedModel === "barebone" ? null : selectedModel}
@@ -540,8 +504,7 @@ export const CustomPage = () => {
 
       {/* 키캡 선택 시에만 KeycapArray 컴포넌트 표시 */}
       {showKeycapArray && (
-        <KeycapArray 
-          key={`keycap-array-${keycapArrayKey}`} // 키캡 배열 강제 리렌더링을 위한 키 추가
+        <KeycapArray           
           size={size || "60"} 
           onClose={() => setShowKeycapArray(false)}
           onKeycapColorChange={handleKeycapColorChange}

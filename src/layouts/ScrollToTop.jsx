@@ -22,7 +22,7 @@ const ScrollButton = styled.button`
 `;
 
 export const ScrollToTop = () => {
-  const { pathname } = useLocation(); // 현재 경로 가져오기
+  const { pathname } = useLocation();
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
