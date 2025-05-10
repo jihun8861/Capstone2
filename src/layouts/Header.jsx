@@ -28,7 +28,7 @@ const MenuIconWrapper = styled.div`
   align-items: center;
 `;
 
-const LogoWrapper = styled.div`
+const LogoWrapper = styled.a`
   flex: 1;
   display: flex;
   justify-content: center;
@@ -158,7 +158,7 @@ export const Header = () => {
       <MenuIconWrapper>
         <MenuIcon scrolled={scrolled} />
       </MenuIconWrapper>
-      <LogoWrapper onClick={() => navigate("/")}>
+      <LogoWrapper href="/">
         <LogoImage src={scrolled ? "/images/logo2.png" : "/images/logo1.png"} />
       </LogoWrapper>
       <Nav>

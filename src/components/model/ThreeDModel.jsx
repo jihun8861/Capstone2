@@ -6,11 +6,15 @@ import React, {
   useImperativeHandle,
 } from "react";
 import styled from "styled-components";
+import { Canvas } from "@react-three/fiber";
+import { useParams, useLocation } from "react-router-dom";
 import { KEYBOARD_POSITIONS } from "../../data/keyboardPositions";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { useParams } from "react-router-dom";
-import { OrbitControls, useGLTF } from "@react-three/drei";
-import * as THREE from "three";
+import { KEYCAP_IDS } from "../../data/KeycapID";
+import { KeyboardPart } from "./KeyboardPart";
+import { ScreenshotHandler } from "./ScreenshotHandler";
+import { ShadowLimiter } from "./ShadowLimiter";
+import { KeyboardOrbitControls } from "./KeyboardOrbitControls";
+import { EffectComposer, Bloom } from "@react-three/postprocessing";
 
 const Container = styled.div`
   width: 100%;
@@ -22,233 +26,89 @@ const Container = styled.div`
 
 // 키보드 크기별 중심점 오프셋 정의
 const KEYBOARD_CENTER_OFFSETS = {
-  "60": { x: -0.9, y: 0, z: 0 },
-  "80": { x: -1.2, y: 0, z: 0 },
-  "100": { x: -1.5, y: 0, z: 0 },
+  60: { x: -0.9, y: 0, z: 0 },
+  80: { x: -1.2, y: 0, z: 0 },
+  100: { x: -1.5, y: 0, z: 0 },
 };
 
 // 키보드 크기별 카메라 설정
 const KEYBOARD_CAMERA_SETTINGS = {
-  "60": { position: [0, 7, 10], target: [0, 0, 0] },
-  "80": { position: [0, 7, 11], target: [0, 0, 0] },
-  "100": { position: [0, 7, 14], target: [0, 0, 0] },
+  60: { position: [0, 7, 10], target: [0, 0, 0] },
+  80: { position: [0, 7, 11], target: [0, 0, 0] },
+  100: { position: [0, 7, 14], target: [0, 0, 0] },
 };
 
-// 스크린샷용 카메라 설정 - 중앙 정렬을 위해 카메라 타겟 수정
-const SCREENSHOT_CAMERA_SETTINGS = {
-  "60": { position: [-0.9, 9, 10], target: [-0.9, 0, 0] },
-  "80": { position: [-1.2, 9, 11], target: [-1.2, 0, 0] },
-  "100": { position: [-1.2, 9, 14], target: [-1.2, 0, 0] },
+// 세션 스토리지에 키캡 색상 정보를 저장하는 함수
+const saveKeycapColorsToSession = (size, keycapColors) => {
+  try {
+    sessionStorage.setItem(
+      `keycapColors_${size}`,
+      JSON.stringify(keycapColors)
+    );
+  } catch (e) {
+    console.error("Failed to save keycap colors to session storage:", e);
+  }
 };
 
-const KeyboardPart = ({
-  modelPath,
-  index,
-  animationProgress,
-  scale,
-  partType,
+// 세션 스토리지에서 키캡 색상 정보를 가져오는 함수
+const getKeycapColorsFromSession = (size) => {
+  try {
+    const colors = sessionStorage.getItem(`keycapColors_${size}`);
+    return colors ? JSON.parse(colors) : {};
+  } catch (e) {
+    console.error("Failed to get keycap colors from session storage:", e);
+    return {};
+  }
+};
+
+const clearKeycapColorsFromSession = (size) => {
+  try {
+    // 특정 사이즈의 키캡 색상 정보 삭제
+    sessionStorage.removeItem(`keycapColors_${size}`);
+
+    // 혹시 모를 다른 형식으로 저장된 키캡 색상 정보도 삭제
+    sessionStorage.removeItem("keycapColors");
+
+    console.log(`키캡 색상 정보 삭제 완료: keycapColors_${size}`);
+  } catch (e) {
+    console.error("Failed to clear keycap colors from session storage:", e);
+  }
+};
+
+const Model = ({
   size,
-  visible = true,
-  color = null,
-  centerOffset,
+  selectedModel,
+  baseColor,
+  switchColor,
+  resetStatus,
+  keycapColors = {},
 }) => {
-  // KeyboardPart 컴포넌트 코드는 그대로 유지
-  const { scene } = useGLTF(modelPath);
-  const modelRef = useRef();
-  const isTopCase = modelPath.includes("5.TopCase.glb");
-  const isTopSwitch = modelPath.includes("TopSwitchs.glb");
-
-  useEffect(() => {
-    scene.traverse((child) => {
-      if (child.isMesh) {
-        child.receiveShadow = true;
-  
-        if (isTopCase) {
-          child.castShadow = false;
-        } else {
-          child.castShadow = true;
-        }
-  
-        if ((isTopCase || isTopSwitch) && color) {
-          const originalMaterial = child.material;
-          const newMaterial = new THREE.MeshStandardMaterial({
-            color: new THREE.Color(color),
-            roughness: originalMaterial?.roughness ?? 0.5,
-            metalness: originalMaterial?.metalness ?? 0.3,
-          });
-          child.material = newMaterial;
-        }
-      }
-    });
-  
-    // 중심점 계산
-    const box = new THREE.Box3().setFromObject(scene);
-    const center = new THREE.Vector3();
-    box.getCenter(center);
-  
-    // 중심점을 원점으로 맞추기
-    scene.position.sub(center);
-  }, [scene, color, isTopCase, isTopSwitch]);
-  
-
-  useFrame(() => {
-    if (modelRef.current) {
-      if (partType === "base") {
-        const initialPos = KEYBOARD_POSITIONS.getInitialPosition(
-          size,
-          partType,
-          index
-        );
-        const finalPos = KEYBOARD_POSITIONS.getFinalPosition(
-          size,
-          partType,
-          index
-        );
-
-        // 중심점 오프셋 적용
-        modelRef.current.position.x = THREE.MathUtils.lerp(
-          initialPos[0],
-          finalPos[0],
-          animationProgress
-        ) + centerOffset.x;
-        
-        modelRef.current.position.y = THREE.MathUtils.lerp(
-          initialPos[1],
-          finalPos[1],
-          animationProgress
-        ) + centerOffset.y;
-        
-        modelRef.current.position.z = THREE.MathUtils.lerp(
-          initialPos[2],
-          finalPos[2],
-          animationProgress
-        ) + centerOffset.z;
-      } else {
-        const initialPos = KEYBOARD_POSITIONS.getInitialPosition(
-          size,
-          partType
-        );
-        const finalPos = KEYBOARD_POSITIONS.getFinalPosition(size, partType);
-
-        // 중심점 오프셋 적용
-        modelRef.current.position.x = initialPos[0] + centerOffset.x;
-        modelRef.current.position.y = THREE.MathUtils.lerp(
-          initialPos[1],
-          finalPos[1],
-          animationProgress
-        ) + centerOffset.y;
-        modelRef.current.position.z = initialPos[2] + centerOffset.z;
-      }
-    }
-  });
-
-  return visible ? (
-    <primitive ref={modelRef} object={scene} scale={scale} />
-  ) : null;
-};
-
-const ScreenshotHandler = forwardRef(({ children, size }, ref) => {
-  // 수정된 ScreenshotHandler 컴포넌트
-  const { gl, scene, camera } = useThree();
-
-  useImperativeHandle(ref, () => ({
-    takeScreenshot: () => {
-      // 기존 카메라 상태 저장
-      const originalPosition = camera.position.clone();
-      const originalRotation = camera.rotation.clone();
-      const originalQuaternion = camera.quaternion.clone();
-
-      // 스크린샷을 위한 카메라 위치 설정
-      const screenshotSettings = SCREENSHOT_CAMERA_SETTINGS[size] || SCREENSHOT_CAMERA_SETTINGS["100"];
-      
-      // 카메라 위치 설정
-      camera.position.set(...screenshotSettings.position);
-      
-      // 카메라가 모델의 중앙을 바라보도록 설정
-      // centerOffset 값을 타겟에 적용하여 모델이 중앙에 보이도록 조정
-      camera.lookAt(new THREE.Vector3(...screenshotSettings.target));
-      
-      // 렌더링
-      gl.render(scene, camera);
-
-      // 스크린샷 생성
-      const dataURL = gl.domElement.toDataURL("image/png");
-
-      // 카메라 원래 상태로 복원
-      camera.position.copy(originalPosition);
-      camera.quaternion.copy(originalQuaternion);
-      camera.rotation.copy(originalRotation);
-      
-      // 복원 후 다시 렌더링
-      gl.render(scene, camera);
-
-      return dataURL;
-    },
-  }));
-
-  return <>{children}</>;
-});
-
-const KeyboardOrbitControls = ({ resetCamera, cameraSettings }) => {
-  const controls = useRef();
-  const { camera } = useThree();
-
-  // 카메라 리셋 기능 추가
-  useEffect(() => {
-    if (resetCamera && controls.current) {
-      // 카메라 위치 초기화
-      if (cameraSettings && cameraSettings.position) {
-        camera.position.set(...cameraSettings.position);
-      } else {
-        camera.position.set(0, 7, 12);
-      }
-      
-      // 카메라 타겟 초기화
-      if (cameraSettings && cameraSettings.target) {
-        controls.current.target.set(...cameraSettings.target);
-      } else {
-        controls.current.target.set(0, 0, 0);
-      }
-      
-      controls.current.update();
-    }
-  }, [resetCamera, cameraSettings, camera]);
-
-  useEffect(() => {
-    if (controls.current) {
-      controls.current.target.set(0, 0, 0);
-      controls.current.update();
-    }
-  }, []);
-
-  return (
-    <OrbitControls
-      ref={controls}
-      enableZoom={true}
-      minDistance={6}
-      maxDistance={20}
-      zoomSpeed={0.3}
-      maxPolarAngle={Math.PI / 2}
-      rotateSpeed={0.5}
-    />
-  );
-};
-
-const Model = ({ size, selectedModel, baseColor, switchColor, resetStatus }) => {
   const [baseAnimationProgress, setBaseAnimationProgress] = useState(0);
   const [switchAnimationProgress, setSwitchAnimationProgress] = useState(0);
   const [keycapAnimationProgress, setKeycapAnimationProgress] = useState(0);
+  const [engravingAnimationProgress, setEngravingAnimationProgress] =
+    useState(0);
   const [showSwitch, setShowSwitch] = useState(false);
   const [showKeycap, setShowKeycap] = useState(false);
+  const [showEngraving, setShowEngraving] = useState(false);
+  const [currentKeycapColors, setCurrentKeycapColors] = useState(keycapColors);
   const groupRef = useRef();
   const scale = KEYBOARD_POSITIONS.getScale(size);
-  
+
   // 키보드 사이즈에 따른 중심점 오프셋
-  const centerOffset = KEYBOARD_CENTER_OFFSETS[size] || KEYBOARD_CENTER_OFFSETS["100"];
+  const centerOffset =
+    KEYBOARD_CENTER_OFFSETS[size] || KEYBOARD_CENTER_OFFSETS["100"];
 
   const baseAnimationExecuted = useRef(false);
   const switchAnimationExecuted = useRef({});
   const keycapAnimationExecuted = useRef({});
+  const engravingAnimationExecuted = useRef({});
+
+  // keycapColors prop이 변경되면 currentKeycapColors 상태를 업데이트하고 세션 스토리지에 저장
+  useEffect(() => {
+    setCurrentKeycapColors(keycapColors);
+    saveKeycapColorsToSession(size, keycapColors);
+  }, [keycapColors, size]);
 
   // 다시 시작하기 효과를 위한 리셋 함수
   useEffect(() => {
@@ -257,33 +117,47 @@ const Model = ({ size, selectedModel, baseColor, switchColor, resetStatus }) => 
       baseAnimationExecuted.current = false;
       switchAnimationExecuted.current = {};
       keycapAnimationExecuted.current = {};
-      
+      engravingAnimationExecuted.current = {};
+
       // 애니메이션 진행률 초기화
       setBaseAnimationProgress(0);
       setSwitchAnimationProgress(0);
       setKeycapAnimationProgress(0);
-      
-      // 스위치와 키캡 표시 상태 초기화
+      setEngravingAnimationProgress(0);
+
+      // 스위치와 키캡, 각인 표시 상태 초기화
       setShowSwitch(false);
       setShowKeycap(false);
+      setShowEngraving(false);
+
+      // 키캡 색상 초기화 - 상태와 세션 스토리지 모두 초기화
+      setCurrentKeycapColors({});
+      clearKeycapColorsFromSession(size);
 
       // 애니메이션 다시 시작
       setTimeout(() => {
         animateBaseParts();
       }, 500);
     }
-  }, [resetStatus]);
+  }, [resetStatus, size]);
 
   // 사이즈 변경 시 상태 초기화
   useEffect(() => {
     baseAnimationExecuted.current = false;
     switchAnimationExecuted.current = {};
     keycapAnimationExecuted.current = {};
+    engravingAnimationExecuted.current = {};
     setBaseAnimationProgress(0);
     setSwitchAnimationProgress(0);
     setKeycapAnimationProgress(0);
+    setEngravingAnimationProgress(0);
     setShowSwitch(false);
     setShowKeycap(false);
+    setShowEngraving(false);
+
+    // 사이즈 변경 시 해당 사이즈의 저장된 키캡 색상 정보를 가져옴
+    const savedColors = getKeycapColorsFromSession(size);
+    setCurrentKeycapColors(savedColors);
   }, [size]);
 
   // 기본 파트 애니메이션 함수
@@ -322,7 +196,10 @@ const Model = ({ size, selectedModel, baseColor, switchColor, resetStatus }) => 
 
   const BOTTOM_SWITCH_MODEL_PATH = `/keyboard/${size}keyboard/${size}BottomSwitchs.glb`;
   const TOP_SWITCH_MODEL_PATH = `/keyboard/${size}keyboard/${size}TopSwitchs.glb`;
-  const KEYCAP_MODEL_PATH = `/keyboard/${size}keyboard/${size}Keycaps.glb`;
+  const ENGRAVING_MODEL_PATH = `/keyboard/${size}keyboard/${size}Engraving.glb`;
+
+  // 키캡 아이디 목록 가져오기
+  const keycapIds = KEYCAP_IDS[size] || KEYCAP_IDS["100"];
 
   useEffect(() => {
     if (selectedModel === "switch" && !showSwitch) {
@@ -351,30 +228,54 @@ const Model = ({ size, selectedModel, baseColor, switchColor, resetStatus }) => 
       }, 100);
     } else if (selectedModel === "keycap" && !showKeycap) {
       setShowKeycap(true);
+      setShowEngraving(true); // 키캡 선택 시 각인도 함께 표시
+
       if (keycapAnimationExecuted.current[size]) {
         setKeycapAnimationProgress(1);
-        return;
+      } else {
+        setTimeout(() => {
+          const duration = 1500;
+          const startTime = Date.now();
+
+          const updateAnimation = () => {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            setKeycapAnimationProgress(progress);
+            if (progress < 1) {
+              requestAnimationFrame(updateAnimation);
+            } else {
+              keycapAnimationExecuted.current[size] = true;
+            }
+          };
+
+          requestAnimationFrame(updateAnimation);
+        }, 100);
       }
 
-      setTimeout(() => {
-        const duration = 1500;
-        const startTime = Date.now();
+      // 각인 애니메이션 실행
+      if (engravingAnimationExecuted.current[size]) {
+        setEngravingAnimationProgress(1);
+      } else {
+        setTimeout(() => {
+          const duration = 1500;
+          const startTime = Date.now();
 
-        const updateAnimation = () => {
-          const elapsed = Date.now() - startTime;
-          const progress = Math.min(elapsed / duration, 1);
-          setKeycapAnimationProgress(progress);
-          if (progress < 1) {
-            requestAnimationFrame(updateAnimation);
-          } else {
-            keycapAnimationExecuted.current[size] = true;
-          }
-        };
+          const updateAnimation = () => {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            setEngravingAnimationProgress(progress);
+            if (progress < 1) {
+              requestAnimationFrame(updateAnimation);
+            } else {
+              engravingAnimationExecuted.current[size] = true;
+            }
+          };
 
-        requestAnimationFrame(updateAnimation);
-      }, 100);
+          requestAnimationFrame(updateAnimation);
+        }, 100);
+      }
     }
-  }, [selectedModel, size, showSwitch, showKeycap]);
+  }, [selectedModel, size, showSwitch, showKeycap, showEngraving]);
 
   return (
     <group ref={groupRef} position={[0, 0, 0]}>
@@ -416,13 +317,30 @@ const Model = ({ size, selectedModel, baseColor, switchColor, resetStatus }) => 
         </>
       )}
 
-      {showKeycap && (
+      {/* 개별 키캡 모델 렌더링 */}
+      {showKeycap &&
+        keycapIds.map((keycapId, index) => (
+          <KeyboardPart
+            key={`keycap-${keycapId}`}
+            modelPath={`/keyboard/${size}keyboard/${size}keycaps/${keycapId}.glb`}
+            index={index}
+            animationProgress={keycapAnimationProgress}
+            scale={scale}
+            partType="keycap"
+            size={size}
+            color={currentKeycapColors[keycapId] || null} // 현재 키캡 색상 적용
+            centerOffset={centerOffset}
+          />
+        ))}
+
+      {/* 각인 모델 추가 */}
+      {showEngraving && (
         <KeyboardPart
-          key="keycaps"
-          modelPath={KEYCAP_MODEL_PATH}
-          animationProgress={keycapAnimationProgress}
+          key="engraving"
+          modelPath={ENGRAVING_MODEL_PATH}
+          animationProgress={engravingAnimationProgress}
           scale={scale}
-          partType="keycap"
+          partType="keycap" // 키캡과 동일한 애니메이션 파트 타입 사용
           size={size}
           centerOffset={centerOffset}
         />
@@ -431,28 +349,10 @@ const Model = ({ size, selectedModel, baseColor, switchColor, resetStatus }) => 
   );
 };
 
-const ShadowLimiter = () => {
-  const { scene } = useThree();
-
-  useEffect(() => {
-    scene.traverse((object) => {
-      if (object.isLight && object.shadow) {
-        object.shadow.camera.near = 1;
-        object.shadow.camera.far = 20;
-        object.shadow.mapSize.width = 2048;
-        object.shadow.mapSize.height = 2048;
-        object.shadow.radius = 1;
-        object.shadow.bias = -0.001;
-      }
-    });
-  }, [scene]);
-
-  return null;
-};
-
 export const ThreeDModel = forwardRef(
-  ({ size, selectedModel, baseColor, switchColor }, ref) => {
+  ({ size, selectedModel, baseColor, switchColor, keycapColors = {} }, ref) => {
     const { size: urlSize } = useParams();
+    const location = useLocation();
     const keyboardSize = size || urlSize || "100";
     const validSize = ["60", "80", "100"].includes(keyboardSize)
       ? keyboardSize
@@ -460,12 +360,64 @@ export const ThreeDModel = forwardRef(
     const screenshotRef = useRef();
     const [resetStatus, setResetStatus] = useState(false);
     const [resetCamera, setResetCamera] = useState(false);
+    const [internalKeycapColors, setInternalKeycapColors] = useState({});
+
+    // 컴포넌트 마운트 시 세션 스토리지에서 키캡 색상 정보 로드
+    useEffect(() => {
+      const savedColors = getKeycapColorsFromSession(validSize);
+      setInternalKeycapColors(savedColors);
+    }, [validSize]);
+
+    // 페이지 변경 감지 및 세션 스토리지 초기화
+    useEffect(() => {
+      // 페이지 변경 이벤트 리스너
+      const handlePageChange = () => {
+        clearKeycapColorsFromSession(validSize);
+        setInternalKeycapColors({});
+      };
+
+      // 브라우저 창이 닫힐 때 세션 스토리지 초기화
+      const handleBeforeUnload = () => {
+        clearKeycapColorsFromSession(validSize);
+      };
+
+      // 이벤트 리스너 등록
+      window.addEventListener("beforeunload", handleBeforeUnload);
+
+      // 위치 변경 시 이전 페이지 정보 저장
+      const prevPath = location.pathname;
+
+      // 컴포넌트 언마운트 또는 위치 변경 시 클린업
+      return () => {
+        window.removeEventListener("beforeunload", handleBeforeUnload);
+
+        // 라우트가 변경되면 세션 스토리지 초기화 (명시적으로 현재 경로 확인)
+        if (location.pathname !== prevPath) {
+          console.log("페이지 변경 감지: 키캡 색상 초기화");
+          handlePageChange();
+        }
+      };
+    }, [validSize, location.pathname]);
+
+    // 키캡 색상 업데이트 함수
+    const updateKeycapColor = (keycapId, color) => {
+      const newColors = { ...internalKeycapColors, [keycapId]: color };
+      setInternalKeycapColors(newColors);
+      saveKeycapColorsToSession(validSize, newColors);
+    };
+
+    // 모든 키캡 색상 초기화 함수
+    const resetKeycapColors = () => {
+      setInternalKeycapColors({});
+      clearKeycapColorsFromSession(validSize);
+    };
 
     // 리셋 함수 구현
     const resetKeyboardModel = () => {
-      setResetStatus(prev => !prev); // 토글하여 useEffect 트리거
+      setResetStatus((prev) => !prev); // 토글하여 useEffect 트리거
       setResetCamera(true);
-      
+      resetKeycapColors(); // 키캡 색상 초기화 추가
+
       // 카메라 리셋 후 상태 복원
       setTimeout(() => {
         setResetCamera(false);
@@ -480,11 +432,28 @@ export const ThreeDModel = forwardRef(
         return null;
       },
       // 다시 시작하기 기능 추가
-      resetModel: resetKeyboardModel
+      resetModel: resetKeyboardModel,
+      // 키캡 색상 초기화 함수 수정
+      resetKeycapColors: () => {
+        setInternalKeycapColors({});
+        clearKeycapColorsFromSession(validSize);
+        // Model 컴포넌트에 변경사항 전달
+        setResetStatus((prev) => !prev);
+      },
+      // 모든 키캡 색상 초기화 함수 추가 (CustomPage에서 호출됨)
+      resetAllKeycapColors: () => {
+        setInternalKeycapColors({});
+        clearKeycapColorsFromSession(validSize);
+        // Model 컴포넌트에 변경사항 전달
+        setResetStatus((prev) => !prev);
+      },
+      // 특정 키캡 색상 변경 함수 추가 (외부에서 호출 가능)
+      updateKeycapColor: updateKeycapColor,
     }));
 
     // 선택된 키보드 크기에 맞는 카메라 설정
-    const cameraSettings = KEYBOARD_CAMERA_SETTINGS[validSize] || KEYBOARD_CAMERA_SETTINGS["100"];
+    const cameraSettings =
+      KEYBOARD_CAMERA_SETTINGS[validSize] || KEYBOARD_CAMERA_SETTINGS["100"];
 
     return (
       <Container>
@@ -526,8 +495,8 @@ export const ThreeDModel = forwardRef(
               castShadow={false}
             />
 
-            <KeyboardOrbitControls 
-              size={validSize} 
+            <KeyboardOrbitControls
+              size={validSize}
               resetCamera={resetCamera}
               cameraSettings={cameraSettings}
             />
@@ -538,7 +507,19 @@ export const ThreeDModel = forwardRef(
               baseColor={baseColor}
               switchColor={switchColor}
               resetStatus={resetStatus}
+              keycapColors={keycapColors}
             />
+
+            {/* LED Bloom 효과 추가 - switch 모델이 선택된 경우에만 적용 */}
+            {selectedModel === "switch" && (
+              <EffectComposer>
+                <Bloom
+                  luminanceThreshold={0.2}
+                  luminanceSmoothing={0.9}
+                  intensity={0.1}
+                />
+              </EffectComposer>
+            )}
           </ScreenshotHandler>
         </Canvas>
       </Container>

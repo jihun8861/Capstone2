@@ -1,9 +1,10 @@
 import styled from "styled-components";
 import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
-import { FiRefreshCw, FiShare2, FiSave, FiX } from "react-icons/fi";
+import { FiRefreshCw, FiShare2, FiSave } from "react-icons/fi";
 import { ThreeDModel } from "../../components/model/ThreeDModel";
 import { ColorSelect } from "../../color/ColorSelect";
+import { KeycapArray } from "./KeycapArray";
 import { useAuthStore } from "../../api/useAuthStore";
 import { saveItem } from "../../api/saveItem";
 import { KeyboardModal } from "../../components/modal/KeyboardModal";
@@ -64,14 +65,13 @@ const SelectContainer = styled.div`
   display: flex;
   width: 15%;
   height: 100%;
-  border: solid 1px;
+  margin-left: 30px;
 `;
 
 const ThreeDContainer = styled.div`
   display: flex;
   width: 85%;
   height: 100%;
-  border: solid 1px;
   position: relative;
   overflow: hidden;
   justify-content: center;
@@ -208,11 +208,20 @@ export const CustomPage = () => {
   const [restartModalOpen, setRestartModalOpen] = useState(false);
   const [saveModalOpen, setSaveModalOpen] = useState(false);
   const [modelImage, setModelImage] = useState("");
+  
+  // 제목 상태 추가
+  const [designTitle, setDesignTitle] = useState("");
 
   // 색상 상태 추가
   const [baseColor, setBaseColor] = useState("#ffffff");
-  const [switchColor, setSwitchColor] = useState("#ffffff"); // 스위치 기본 색상 설정
+  const [switchColor, setSwitchColor] = useState("#ffffff");
   const [showColorPicker, setShowColorPicker] = useState(false);
+  
+  // 키캡 배열 컴포넌트 표시 상태
+  const [showKeycapArray, setShowKeycapArray] = useState(false);
+  
+  // 키캡 색상 상태 관리 - 키 ID를 색상에 매핑
+  const [keycapColors, setKeycapColors] = useState({});
 
   const handleModelSelect = (modelType) => {
     setPrevSelectedModel(selectedModel);
@@ -221,14 +230,30 @@ export const CustomPage = () => {
     // 베어본 선택 시 색상 선택기 표시
     if (modelType === "barebone") {
       setShowColorPicker(true);
+      setShowKeycapArray(false);
+    } else if (modelType === "keycap") {
+      setShowColorPicker(false);
+      setShowKeycapArray(true);
     } else {
       setShowColorPicker(false);
+      setShowKeycapArray(false);
     }
   };
 
   // 스위치 색상 선택 핸들러
   const handleSwitchColorSelect = (color) => {
     setSwitchColor(color);
+  };
+  
+  // 키캡 색상 변경 핸들러
+  const handleKeycapColorChange = (keycapId, color, allColors) => {
+    // 전체 키캡 색상 상태 업데이트
+    setKeycapColors(allColors || { ...keycapColors, [keycapId]: color });
+    
+    // 3D 모델에 키캡 색상 변경 적용 (필요한 경우)
+    if (modelRef.current && modelRef.current.updateKeycapColor) {
+      modelRef.current.updateKeycapColor(keycapId, color);
+    }
   };
 
   const handleRestart = () => {
@@ -240,13 +265,13 @@ export const CustomPage = () => {
     setRestartModalOpen(true);
   };
 
-  // 다시 시작하기 확인 처리
-  const handleConfirmRestart = () => {
-    setRestartModalOpen(false);
-    // 색상 초기화 추가
-    setBaseColor("#ffffff");
-    window.location.reload();
-  };
+  // 다시 시작하기 확인 처리 - 완전히 초기화하고 모델 리렌더링
+const handleConfirmRestart = () => {
+  setRestartModalOpen(false);
+  
+  // 페이지 새로고침 실행
+  window.location.reload();
+};
 
   const handleSaveClick = async () => {
     if (!user?.email) {
@@ -264,22 +289,35 @@ export const CustomPage = () => {
       return;
     }
 
+    // 모달 열기 전에 제목 초기화 (이전에 입력한 값이 남아있지 않도록)
+    setDesignTitle("");
     setSaveModalOpen(true);
   };
 
+  // 제목 변경 핸들러
+  const handleTitleChange = (e) => {
+    setDesignTitle(e.target.value);
+  };
+
   const handleConfirmSave = async () => {
+    // 제목이 비어있는지 확인
+    if (!designTitle.trim()) {
+      alert("제목을 입력해주세요.");
+      return;
+    }
+    
     setSaveModalOpen(false);
 
     // FormData 객체 생성
     const formData = new FormData();
 
-    // JSON 데이터 생성 - 스위치 색상 정보 추가
+    // JSON 데이터 생성 - 제목과 스위치 색상 정보 추가
     const jsonData = {
       email: user.email,
+      title: designTitle, // 제목 정보 추가
       barebonecolor: baseColor,
       keyboardtype: size,
-      keycapcolor: "test",
-      design: "test",
+      keycapcolors: keycapColors, // 키캡 색상 정보를 객체로 저장
       switchcolor: switchColor, // 스위치 색상 정보 업데이트
     };
 
@@ -334,6 +372,14 @@ export const CustomPage = () => {
       console.log(`선택된 모델: ${selectedModel}, 사이즈: ${size}`);
     }
   }, [selectedModel, size]);
+  
+  // 컴포넌트 마운트 시점에 초기화 실행 (필요한 경우)
+  useEffect(() => {
+    // 최초 마운트 시 모든 상태 초기화
+    setBaseColor("#ffffff");
+    setSwitchColor("#ffffff");
+    setKeycapColors({});
+  }, []);
 
   return (
     <Container>
@@ -420,7 +466,8 @@ export const CustomPage = () => {
             selectedModel={selectedModel === "barebone" ? null : selectedModel}
             prevSelectedModel={prevSelectedModel}
             baseColor={baseColor}
-            switchColor={switchColor} // 스위치 색상 전달
+            switchColor={switchColor}
+            keycapColors={keycapColors} // 키캡 색상 정보 전달
           />
         </ThreeDContainer>
       </CustomFrame>
@@ -436,7 +483,7 @@ export const CustomPage = () => {
         cancelText="취소"
       />
 
-      {/* 저장하기 모달 */}
+      {/* 저장하기 모달 - 제목 입력 필드 추가 */}
       <KeyboardModal
         isOpen={saveModalOpen}
         onClose={() => setSaveModalOpen(false)}
@@ -445,11 +492,24 @@ export const CustomPage = () => {
         message="현재 디자인을 저장하시겠습니까?"
         confirmText="저장하기"
         cancelText="취소"
+        showTitleInput={true} // 제목 입력 필드 표시
+        titleValue={designTitle} // 제목 값
+        onTitleChange={handleTitleChange} // 제목 변경 핸들러
       />
 
       {/* 스위치 선택 시에만 ColorSelect 컴포넌트 표시 */}
       {selectedModel === "switch" && (
         <ColorSelect onColorSelect={handleSwitchColorSelect} />
+      )}
+
+      {/* 키캡 선택 시에만 KeycapArray 컴포넌트 표시 */}
+      {showKeycapArray && (
+        <KeycapArray           
+          size={size || "60"} 
+          onClose={() => setShowKeycapArray(false)}
+          onKeycapColorChange={handleKeycapColorChange}
+          initialColors={keycapColors}
+        />
       )}
     </Container>
   );
