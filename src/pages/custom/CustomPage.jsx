@@ -85,7 +85,8 @@ const CustomFrame = styled.div`
   display: flex;
   justify-content: center;
   align-items: center;
-  background-color: #e9ecef;
+  background-color: ${props => props.isDarkMode ? '#121212' : '#e9ecef'};
+  transition: background-color 0.5s ease;
 `;
 
 const SelectFrame = styled.div`
@@ -195,6 +196,43 @@ const ColorInput = styled.input`
   font-size: 14px;
 `;
 
+// LED 버튼을 SelectFrame 외부에 배치하기 위한 컨테이너
+const LedButtonContainer = styled.div`
+  position: absolute;
+  top: 30px;
+  left: 30px;
+  z-index: 20;
+`;
+
+const LedButton = styled.button`
+  padding: 12px 20px;
+  background-color: ${props => props.active ? '#00ffff' : '#333'};
+  color: ${props => props.active ? '#000' : '#fff'};
+  border: none;
+  border-radius: 5px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: ${props => props.active ? '0 0 15px #00ffff' : 'none'};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  &:hover {
+    background-color: ${props => props.active ? '#66ffff' : '#444'};
+  }
+`;
+
+// LED 아이콘 컴포넌트
+const LedIcon = styled.div`
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: ${props => props.active ? '#00ffff' : '#666'};
+  box-shadow: ${props => props.active ? '0 0 10px #00ffff' : 'none'};
+  margin-right: 8px;
+`;
+
 export const CustomPage = () => {
   const { size } = useParams();
   const { user } = useAuthStore();
@@ -222,6 +260,19 @@ export const CustomPage = () => {
   
   // 키캡 색상 상태 관리 - 키 ID를 색상에 매핑
   const [keycapColors, setKeycapColors] = useState({});
+
+  // LED 상태 관리
+  const [ledEnabled, setLedEnabled] = useState(false);
+
+  // LED 토글 핸들러 추가
+  const handleLedToggle = () => {
+    setLedEnabled(prev => !prev);
+    
+    // ThreeDModel의 LED 상태 토글
+    if (modelRef.current && modelRef.current.toggleLed) {
+      modelRef.current.toggleLed();
+    }
+  };
 
   const handleModelSelect = (modelType) => {
     setPrevSelectedModel(selectedModel);
@@ -266,12 +317,12 @@ export const CustomPage = () => {
   };
 
   // 다시 시작하기 확인 처리 - 완전히 초기화하고 모델 리렌더링
-const handleConfirmRestart = () => {
-  setRestartModalOpen(false);
-  
-  // 페이지 새로고침 실행
-  window.location.reload();
-};
+  const handleConfirmRestart = () => {
+    setRestartModalOpen(false);
+    
+    // 페이지 새로고침 실행
+    window.location.reload();
+  };
 
   const handleSaveClick = async () => {
     if (!user?.email) {
@@ -319,6 +370,7 @@ const handleConfirmRestart = () => {
       keyboardtype: size,
       keycapcolors: keycapColors, // 키캡 색상 정보를 객체로 저장
       switchcolor: switchColor, // 스위치 색상 정보 업데이트
+      ledEnabled: ledEnabled, // LED 상태 추가
     };
 
     // FormData에 JSON 추가
@@ -406,7 +458,7 @@ const handleConfirmRestart = () => {
         </RightSection>
       </HeaderFrame>
 
-      <CustomFrame>
+      <CustomFrame isDarkMode={ledEnabled}>
         <SelectContainer>
           <SelectFrame>
             <SelectOption
@@ -468,8 +520,20 @@ const handleConfirmRestart = () => {
             baseColor={baseColor}
             switchColor={switchColor}
             keycapColors={keycapColors} // 키캡 색상 정보 전달
+            ledEnabled={ledEnabled} // LED 상태 전달
           />
         </ThreeDContainer>
+
+        {/* LED 버튼을 밖으로 이동 */}
+        <LedButtonContainer>
+          <LedButton 
+            onClick={handleLedToggle}
+            active={ledEnabled}
+          >
+            <LedIcon active={ledEnabled} />
+            LED {ledEnabled ? "OFF" : "ON"}
+          </LedButton>
+        </LedButtonContainer>
       </CustomFrame>
 
       {/* 다시 시작하기 모달 */}

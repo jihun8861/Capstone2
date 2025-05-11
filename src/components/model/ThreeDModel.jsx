@@ -15,6 +15,7 @@ import { ScreenshotHandler } from "./ScreenshotHandler";
 import { ShadowLimiter } from "./ShadowLimiter";
 import { KeyboardOrbitControls } from "./KeyboardOrbitControls";
 import { EffectComposer, Bloom } from "@react-three/postprocessing";
+import * as THREE from "three";
 
 const Container = styled.div`
   width: 100%;
@@ -82,6 +83,7 @@ const Model = ({
   switchColor,
   resetStatus,
   keycapColors = {},
+  ledEnabled = false,
 }) => {
   const [baseAnimationProgress, setBaseAnimationProgress] = useState(0);
   const [switchAnimationProgress, setSwitchAnimationProgress] = useState(0);
@@ -103,6 +105,23 @@ const Model = ({
   const switchAnimationExecuted = useRef({});
   const keycapAnimationExecuted = useRef({});
   const engravingAnimationExecuted = useRef({});
+
+  const bottomSwitchRef = useRef();
+
+  // LED 효과 적용
+  useEffect(() => {
+    if (bottomSwitchRef.current && bottomSwitchRef.current.material) {
+      if (ledEnabled) {
+        // LED가 켜진 경우 발광 효과 추가
+        bottomSwitchRef.current.material.emissive = new THREE.Color(0x3399ff); // 파란색 발광
+        bottomSwitchRef.current.material.emissiveIntensity = 0.5;
+      } else {
+        // LED가 꺼진 경우 발광 효과 제거
+        bottomSwitchRef.current.material.emissive = new THREE.Color(0x000000);
+        bottomSwitchRef.current.material.emissiveIntensity = 0;
+      }
+    }
+  }, [ledEnabled]);
 
   // keycapColors prop이 변경되면 currentKeycapColors 상태를 업데이트하고 세션 스토리지에 저장
   useEffect(() => {
@@ -303,6 +322,8 @@ const Model = ({
             partType="switch"
             size={size}
             centerOffset={centerOffset}
+             meshRef={bottomSwitchRef} // ref 전달하여 재질에 접근
+            ledEnabled={ledEnabled}
           />
           <KeyboardPart
             key="top-switches"
@@ -361,6 +382,8 @@ export const ThreeDModel = forwardRef(
     const [resetStatus, setResetStatus] = useState(false);
     const [resetCamera, setResetCamera] = useState(false);
     const [internalKeycapColors, setInternalKeycapColors] = useState({});
+
+    const [ledEnabled, setLedEnabled] = useState(false);
 
     // 컴포넌트 마운트 시 세션 스토리지에서 키캡 색상 정보 로드
     useEffect(() => {
@@ -451,6 +474,42 @@ export const ThreeDModel = forwardRef(
       updateKeycapColor: updateKeycapColor,
     }));
 
+    // LED 상태 토글 함수 추가
+    const toggleLed = () => {
+      setLedEnabled(prev => !prev);
+    };
+
+    useImperativeHandle(ref, () => ({
+      getScreenshot: () => {
+        if (screenshotRef.current) {
+          return screenshotRef.current.takeScreenshot();
+        }
+        return null;
+      },
+      // 다시 시작하기 기능
+      resetModel: resetKeyboardModel,
+      // 키캡 색상 초기화 함수
+      resetKeycapColors: () => {
+        setInternalKeycapColors({});
+        clearKeycapColorsFromSession(validSize);
+        // Model 컴포넌트에 변경사항 전달
+        setResetStatus((prev) => !prev);
+      },
+      // 모든 키캡 색상 초기화 함수
+      resetAllKeycapColors: () => {
+        setInternalKeycapColors({});
+        clearKeycapColorsFromSession(validSize);
+        // Model 컴포넌트에 변경사항 전달
+        setResetStatus((prev) => !prev);
+      },
+      // 특정 키캡 색상 변경 함수
+      updateKeycapColor: updateKeycapColor,
+      // LED 토글 함수 추가
+      toggleLed: toggleLed,
+      // LED 상태 getter
+      isLedEnabled: () => ledEnabled
+    }));
+
     // 선택된 키보드 크기에 맞는 카메라 설정
     const cameraSettings =
       KEYBOARD_CAMERA_SETTINGS[validSize] || KEYBOARD_CAMERA_SETTINGS["100"];
@@ -508,15 +567,16 @@ export const ThreeDModel = forwardRef(
               switchColor={switchColor}
               resetStatus={resetStatus}
               keycapColors={keycapColors}
+              ledEnabled={ledEnabled}
             />
 
             {/* LED Bloom 효과 추가 - switch 모델이 선택된 경우에만 적용 */}
-            {selectedModel === "switch" && (
+            {selectedModel === "switch" && ledEnabled && (
               <EffectComposer>
                 <Bloom
                   luminanceThreshold={0.2}
                   luminanceSmoothing={0.9}
-                  intensity={0.1}
+                  intensity={0.1} // 밝기 약간 증가
                 />
               </EffectComposer>
             )}

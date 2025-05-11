@@ -1,3 +1,5 @@
+// 1. KeyboardPart.jsx 파일 수정
+
 import React, { useRef, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
@@ -14,6 +16,8 @@ export const KeyboardPart = ({
   visible = true,
   color = null,
   centerOffset,
+  // LED 활성화 여부 prop 추가
+  ledEnabled = false
 }) => {
   const { scene } = useGLTF(modelPath);
   const modelRef = useRef();
@@ -25,6 +29,9 @@ export const KeyboardPart = ({
   // LED 색상 설정 (원하는 색상으로 변경 가능)
   const ledColor = new THREE.Color("#00ffff"); // 청록색 LED
   const ledIntensity = 0.8;
+
+  // LED 효과용 재질 참조 저장
+  const ledMaterialRef = useRef(null);
 
   useEffect(() => {
     scene.traverse((child) => {
@@ -40,13 +47,18 @@ export const KeyboardPart = ({
         // BottomSwitch에 LED 효과 적용
         if (isBottomSwitch) {
           const originalMaterial = child.material;
-          child.material = new THREE.MeshStandardMaterial({
+          const newMaterial = new THREE.MeshStandardMaterial({
             color: originalMaterial.color || new THREE.Color("#ffffff"),
             roughness: 0.2,
             metalness: 0.6,
-            emissive: ledColor,
-            emissiveIntensity: ledIntensity,
+            // LED가 활성화된 경우에만 발광 효과 적용
+            emissive: ledEnabled ? ledColor : new THREE.Color("#000000"),
+            emissiveIntensity: ledEnabled ? ledIntensity : 0,
           });
+          child.material = newMaterial;
+          
+          // 재질 참조 저장 (나중에 업데이트하기 위해)
+          ledMaterialRef.current = newMaterial;
         }
         // 다른 파트에 색상 적용 (기존 로직)
         else if ((isTopCase || isTopSwitch || isKeycap) && color) {
@@ -69,6 +81,22 @@ export const KeyboardPart = ({
     // 중심점을 원점으로 맞추기
     scene.position.sub(center);
   }, [scene, color, isTopCase, isTopSwitch, isBottomSwitch, isKeycap]);
+
+  // LED 상태가 변경될 때마다 재질 업데이트
+  useEffect(() => {
+    if (isBottomSwitch && ledMaterialRef.current) {
+      ledMaterialRef.current.emissive = ledEnabled ? ledColor : new THREE.Color("#000000");
+      ledMaterialRef.current.emissiveIntensity = ledEnabled ? ledIntensity : 0;
+    }
+  }, [ledEnabled, isBottomSwitch]);
+
+  // LED 펄스 효과 (시간에 따라 밝기 변화)
+  useFrame(({ clock }) => {
+    if (isBottomSwitch && ledMaterialRef.current && ledEnabled) {
+      const pulseFactor = 0.2 * Math.sin(clock.getElapsedTime() * 2) + 0.8;
+      ledMaterialRef.current.emissiveIntensity = ledIntensity * pulseFactor;
+    }
+  });
 
   useFrame(() => {
     if (modelRef.current) {
@@ -129,9 +157,4 @@ export const KeyboardPart = ({
   return visible ? (
     <primitive ref={modelRef} object={scene} scale={scale} />
   ) : null;
-};
-
-// LED 발광 효과를 위한 컴포넌트
-export const LEDEffects = () => {
-  return null; // ThreeDModel에 직접 EffectComposer 추가
 };
