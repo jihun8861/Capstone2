@@ -570,13 +570,12 @@ export const ThreeDModel = forwardRef(
               ledEnabled={ledEnabled}
             />
 
-            {/* LED Bloom 효과 추가 - switch 모델이 선택된 경우에만 적용 */}
             {selectedModel === "switch" && ledEnabled && (
               <EffectComposer>
                 <Bloom
-                  luminanceThreshold={0.2}
-                  luminanceSmoothing={0.9}
-                  intensity={0.1} // 밝기 약간 증가
+                  luminanceThreshold={0.9}
+                  luminanceSmoothing={0.5}
+                  intensity={0.5}
                 />
               </EffectComposer>
             )}
