@@ -88,13 +88,13 @@ const Model = ({
   const [baseAnimationProgress, setBaseAnimationProgress] = useState(0);
   const [switchAnimationProgress, setSwitchAnimationProgress] = useState(0);
   const [keycapAnimationProgress, setKeycapAnimationProgress] = useState(0);
-  const [engravingAnimationProgress, setEngravingAnimationProgress] =
-    useState(0);
+  const [engravingAnimationProgress, setEngravingAnimationProgress] = useState(0);
   const [showSwitch, setShowSwitch] = useState(false);
   const [showKeycap, setShowKeycap] = useState(false);
   const [showEngraving, setShowEngraving] = useState(false);
   const [currentKeycapColors, setCurrentKeycapColors] = useState(keycapColors);
   const groupRef = useRef();
+  const pcbRef = useRef(); // PCB 모델에 대한 참조 추가
   const scale = KEYBOARD_POSITIONS.getScale(size);
 
   // 키보드 사이즈에 따른 중심점 오프셋
@@ -106,19 +106,17 @@ const Model = ({
   const keycapAnimationExecuted = useRef({});
   const engravingAnimationExecuted = useRef({});
 
-  const bottomSwitchRef = useRef();
-
   // LED 효과 적용
   useEffect(() => {
-    if (bottomSwitchRef.current && bottomSwitchRef.current.material) {
+    if (pcbRef.current && pcbRef.current.material) {
       if (ledEnabled) {
         // LED가 켜진 경우 발광 효과 추가
-        bottomSwitchRef.current.material.emissive = new THREE.Color(0x3399ff); // 파란색 발광
-        bottomSwitchRef.current.material.emissiveIntensity = 0.5;
+        pcbRef.current.material.emissive = new THREE.Color(0x00ffff) // 밝은 청록색
+        pcbRef.current.material.emissiveIntensity = 0.5;
       } else {
         // LED가 꺼진 경우 발광 효과 제거
-        bottomSwitchRef.current.material.emissive = new THREE.Color(0x000000);
-        bottomSwitchRef.current.material.emissiveIntensity = 0;
+        pcbRef.current.material.emissive = new THREE.Color(0x000000);
+        pcbRef.current.material.emissiveIntensity = 0;
       }
     }
   }, [ledEnabled]);
@@ -309,6 +307,10 @@ const Model = ({
           size={size}
           color={path.includes("5.TopCase.glb") ? baseColor : null}
           centerOffset={centerOffset}
+          // PCB 모델에 ref 전달
+          meshRef={path.includes("2.PCB.glb") ? pcbRef : null}
+          // PCB 모델에 ledEnabled 전달
+          ledEnabled={path.includes("2.PCB.glb") ? ledEnabled : false}
         />
       ))}
 
@@ -322,8 +324,6 @@ const Model = ({
             partType="switch"
             size={size}
             centerOffset={centerOffset}
-             meshRef={bottomSwitchRef} // ref 전달하여 재질에 접근
-            ledEnabled={ledEnabled}
           />
           <KeyboardPart
             key="top-switches"
@@ -371,7 +371,7 @@ const Model = ({
 };
 
 export const ThreeDModel = forwardRef(
-  ({ size, selectedModel, baseColor, switchColor, keycapColors = {} }, ref) => {
+  ({ size, selectedModel, baseColor, switchColor = {} }, ref) => {
     const { size: urlSize } = useParams();
     const location = useLocation();
     const keyboardSize = size || urlSize || "100";
@@ -446,33 +446,6 @@ export const ThreeDModel = forwardRef(
         setResetCamera(false);
       }, 100);
     };
-
-    useImperativeHandle(ref, () => ({
-      getScreenshot: () => {
-        if (screenshotRef.current) {
-          return screenshotRef.current.takeScreenshot();
-        }
-        return null;
-      },
-      // 다시 시작하기 기능 추가
-      resetModel: resetKeyboardModel,
-      // 키캡 색상 초기화 함수 수정
-      resetKeycapColors: () => {
-        setInternalKeycapColors({});
-        clearKeycapColorsFromSession(validSize);
-        // Model 컴포넌트에 변경사항 전달
-        setResetStatus((prev) => !prev);
-      },
-      // 모든 키캡 색상 초기화 함수 추가 (CustomPage에서 호출됨)
-      resetAllKeycapColors: () => {
-        setInternalKeycapColors({});
-        clearKeycapColorsFromSession(validSize);
-        // Model 컴포넌트에 변경사항 전달
-        setResetStatus((prev) => !prev);
-      },
-      // 특정 키캡 색상 변경 함수 추가 (외부에서 호출 가능)
-      updateKeycapColor: updateKeycapColor,
-    }));
 
     // LED 상태 토글 함수 추가
     const toggleLed = () => {
@@ -566,16 +539,17 @@ export const ThreeDModel = forwardRef(
               baseColor={baseColor}
               switchColor={switchColor}
               resetStatus={resetStatus}
-              keycapColors={keycapColors}
+              keycapColors={internalKeycapColors}
               ledEnabled={ledEnabled}
             />
 
-            {selectedModel === "switch" && ledEnabled && (
+            {/* LED가 활성화된 경우 bloom 효과 추가 */}
+            {ledEnabled && (
               <EffectComposer>
                 <Bloom
-                  luminanceThreshold={0.9}
-                  luminanceSmoothing={0.5}
-                  intensity={0.5}
+                  luminanceThreshold={0.5}
+                  luminanceSmoothing={0.7}
+                  intensity={0.7}
                 />
               </EffectComposer>
             )}

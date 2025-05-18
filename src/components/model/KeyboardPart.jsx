@@ -1,5 +1,3 @@
-// 1. KeyboardPart.jsx 파일 수정
-
 import React, { useRef, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
@@ -16,18 +14,18 @@ export const KeyboardPart = ({
   visible = true,
   color = null,
   centerOffset,
-  // LED 활성화 여부 prop 추가
+  meshRef, // ref 추가
   ledEnabled = false
 }) => {
   const { scene } = useGLTF(modelPath);
   const modelRef = useRef();
   const isTopCase = modelPath.includes("5.TopCase.glb");
   const isTopSwitch = modelPath.includes("TopSwitchs.glb");
-  const isBottomSwitch = modelPath.includes("BottomSwitchs.glb");
+  const isPCB = modelPath.includes("2.PCB.glb");
   const isKeycap = partType === "keycap";
   
-  // LED 색상 설정 (원하는 색상으로 변경 가능)
-  const ledColor = new THREE.Color("#ec1c24"); // 청록색 LED
+  // LED 색상 설정
+  const ledColor = new THREE.Color("#FFFFFF"); // 빨간색 LED
   const ledIntensity = 10;
 
   // LED 효과용 재질 참조 저장
@@ -44,8 +42,8 @@ export const KeyboardPart = ({
           child.castShadow = true;
         }
   
-        // BottomSwitch에 LED 효과 적용
-        if (isBottomSwitch) {
+        // PCB에 LED 효과 적용
+        if (isPCB) {
           const originalMaterial = child.material;
           const newMaterial = new THREE.MeshStandardMaterial({
             color: originalMaterial.color || new THREE.Color("#ffffff"),
@@ -59,6 +57,11 @@ export const KeyboardPart = ({
           
           // 재질 참조 저장 (나중에 업데이트하기 위해)
           ledMaterialRef.current = newMaterial;
+          
+          // 외부에서 제공된 ref가 있다면 메시 설정
+          if (meshRef) {
+            meshRef.current = child;
+          }
         }
         // 다른 파트에 색상 적용 (기존 로직)
         else if ((isTopCase || isTopSwitch || isKeycap) && color) {
@@ -80,19 +83,19 @@ export const KeyboardPart = ({
   
     // 중심점을 원점으로 맞추기
     scene.position.sub(center);
-  }, [scene, color, isTopCase, isTopSwitch, isBottomSwitch, isKeycap]);
+  }, [scene, color, isTopCase, isTopSwitch, isPCB, isKeycap, meshRef]);
 
   // LED 상태가 변경될 때마다 재질 업데이트
   useEffect(() => {
-    if (isBottomSwitch && ledMaterialRef.current) {
+    if (isPCB && ledMaterialRef.current) {
       ledMaterialRef.current.emissive = ledEnabled ? ledColor : new THREE.Color("#000000");
       ledMaterialRef.current.emissiveIntensity = ledEnabled ? ledIntensity : 0;
     }
-  }, [ledEnabled, isBottomSwitch]);
+  }, [ledEnabled, isPCB]);
 
   // LED 펄스 효과 (시간에 따라 밝기 변화)
   useFrame(({ clock }) => {
-    if (isBottomSwitch && ledMaterialRef.current && ledEnabled) {
+    if (isPCB && ledMaterialRef.current && ledEnabled) {
       const pulseFactor = 0.2 * Math.sin(clock.getElapsedTime() * 2) + 0.8;
       ledMaterialRef.current.emissiveIntensity = ledIntensity * pulseFactor;
     }

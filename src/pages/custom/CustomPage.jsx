@@ -68,7 +68,6 @@ const SelectContainer = styled.div`
   width: 15%;
   height: 100%;
   margin-left: 30px;
-  border: solid 1px;
 `;
 
 const ThreeDContainer = styled.div`
@@ -79,14 +78,12 @@ const ThreeDContainer = styled.div`
   overflow: hidden;
   justify-content: center;
   align-items: center;
-  border: solid 1px;
 `;
 
 const DescriptionContainer = styled.div`
   display: flex;
   width: 17%;
   height: 100%;
-  border: solid 1px;
 `
 
 const CustomFrame = styled.div`

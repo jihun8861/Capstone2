@@ -1,220 +1,193 @@
-import React, { useState } from "react";
 import styled from "styled-components";
-import { FiShare2 } from "react-icons/fi";
-import { fetchKeyboardRecommendation } from "../../api/recommendation";
 
-// 스타일 컴포넌트 정의
-const RecommendationContainer = styled.div`
+const DescriptionWrapper = styled.div`
   display: flex;
   flex-direction: column;
-  width: 100%;
-  height: 100%;
   padding: 15px;
+  height: 100%;
   overflow-y: auto;
+  background-color: white;
+  border-left: 1px solid #e6e5e1;
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.05);
 `;
 
-const RecommendButton = styled.button`
+const Title = styled.h3`
+  color: #333;
+  font-size: 18px;
+  margin-bottom: 15px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #004aad;
+`;
+
+const Description = styled.p`
+  color: #666;
+  font-size: 14px;
+  line-height: 1.5;
+  margin-bottom: 15px;
+`;
+
+const EmptyState = styled.div`
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  background-color: white;
-  padding: 10px 16px;
-  font-size: 18px;
-  font-weight: bold;
-  cursor: pointer;
-  border: none;
-  margin-bottom: 15px;
-  transition: background-color 0.2s;
-
-  &:hover {
-    background-color: #f0f0f0;
-  }
-
-  &:disabled {
-    cursor: not-allowed;
-    opacity: 0.7;
-  }
-
-  svg {
-    font-size: 18px;
-  }
+  text-align: center;
+  height: 100%;
+  color: #999;
+  padding: 0 15px;
 `;
 
-const DescriptionTitle = styled.h4`
+const EmptyIcon = styled.div`
+  font-size: 40px;
+  margin-bottom: 15px;
+  color: #ccc;
+`;
+
+const RecommendationSection = styled.div`
+  margin-bottom: 20px;
+`;
+
+const SectionTitle = styled.h4`
+  color: #444;
   font-size: 16px;
+  margin-bottom: 12px;
+  margin-top: 20px;
+`;
+
+const ColorCombination = styled.div`
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+  border-left: 3px solid #004aad;
+`;
+
+const ComboTitle = styled.p`
   font-weight: bold;
-  margin: 10px 0;
+  margin-bottom: 8px;
   color: #333;
+  font-size: 15px;
 `;
 
-const RecommendationItem = styled.div`
-  margin-bottom: 15px;
-  padding: 10px;
-  border: 1px solid #eee;
-  border-radius: 5px;
-  background-color: #f9f9f9;
-`;
-
-const ColorDisplay = styled.div`
+const ColorItem = styled.div`
   display: flex;
   align-items: center;
-  margin-bottom: 5px;
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: #555;
 `;
 
 const ColorSwatch = styled.div`
   width: 20px;
   height: 20px;
+  border-radius: 4px;
   background-color: ${props => props.color};
   margin-right: 10px;
   border: 1px solid #ddd;
-  border-radius: 3px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 `;
 
-const ColorLabel = styled.span`
-  font-size: 14px;
-  color: #333;
+const LoadingIndicator = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
 `;
 
-const LoadingSpinner = styled.div`
-  display: inline-block;
-  width: 20px;
-  height: 20px;
-  border: 3px solid rgba(0, 0, 0, 0.1);
+const Spinner = styled.div`
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #004aad;
   border-radius: 50%;
-  border-top-color: #333;
-  animation: spin 1s ease-in-out infinite;
-  margin-left: 10px;
-
+  width: 30px;
+  height: 30px;
+  animation: spin 1s linear infinite;
+  margin-bottom: 15px;
+  
   @keyframes spin {
-    to {
-      transform: rotate(360deg);
-    }
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
   }
 `;
 
-const DescriptionText = styled.p`
+const DescriptionText = styled.div`
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 10px;
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 1.6;
   color: #555;
-  margin: 5px 0;
 `;
 
-const EmptyMessage = styled.p`
-  font-size: 14px;
-  color: #666;
-  text-align: center;
-  margin-top: 20px;
-`;
-
-export const RecommendationComponent = ({ 
-  size, 
-  baseColor, 
-  switchColor, 
-  keycapColors,
-  onApplyRecommendation
-}) => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [recommendationResult, setRecommendationResult] = useState(null);
-
-  const handleRecommendation = async () => {
-    try {
-      setIsLoading(true);
-
-      const result = await fetchKeyboardRecommendation({
-        size,
-        baseColor,
-        switchColor,
-        keycapColors,
-      });
-
-      if (result.status === "OK") {
-        // 전체 응답 결과를 저장
-        setRecommendationResult(result);
-        
-        // 부모 컴포넌트에 첫 번째 추천 결과 전달
-        if (result.data?.keyboards?.length > 0) {
-          const recommendedKeyboard = result.data.keyboards[0];
-          onApplyRecommendation(
-            recommendedKeyboard.barebone || baseColor,
-            recommendedKeyboard.switch || switchColor,
-            recommendedKeyboard.keycap
-          );
-        }
-      } else {
-        alert("추천 색상을 가져오는 데 실패했습니다.");
-      }
-    } catch (error) {
-      console.error(error);
-      alert(error.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // 추천 결과를 렌더링하는 함수
-  const renderRecommendationResults = () => {
-    if (!recommendationResult) {
-      return (
-        <EmptyMessage>
-          키보드를 커스터마이징하고 "추천받기" 버튼을 클릭하면 AI가 추천하는 색상 조합을 볼 수 있습니다.
-        </EmptyMessage>
-      );
-    }
-
-    const keyboards = recommendationResult.data?.keyboards || [];
-    const descriptions = recommendationResult.data?.description || [];
-
+// AI 추천 결과를 표시하는 컴포넌트
+export const Recommendate = ({ recommendationResult, isLoading }) => {
+  // 로딩 중일 때 표시할 컴포넌트
+  if (isLoading) {
     return (
-      <>
-        {keyboards.length > 0 && (
-          <>
-            <DescriptionTitle>추천 색상 조합</DescriptionTitle>
-            {keyboards.map((keyboard, index) => (
-              <RecommendationItem key={index}>
-                <strong>조합 {index + 1}</strong>
-                <ColorDisplay>
-                  <ColorSwatch color={keyboard.barebone} />
-                  <ColorLabel>베어본: {keyboard.barebone}</ColorLabel>
-                </ColorDisplay>
-                <ColorDisplay>
-                  <ColorSwatch color={keyboard.keycap} />
-                  <ColorLabel>키캡: {keyboard.keycap}</ColorLabel>
-                </ColorDisplay>
-                <ColorDisplay>
-                  <ColorSwatch color={keyboard.switch} />
-                  <ColorLabel>스위치: {keyboard.switch}</ColorLabel>
-                </ColorDisplay>
-              </RecommendationItem>
-            ))}
-          </>
-        )}
-        
-        {descriptions.length > 0 && (
-          <>
-            <DescriptionTitle>키보드 설명</DescriptionTitle>
-            {descriptions.map((desc, index) => (
-              <DescriptionText key={index}>{desc}</DescriptionText>
-            ))}
-          </>
-        )}
-      </>
+      <DescriptionWrapper>
+        <LoadingIndicator>
+          <Spinner />
+          <Description>AI가 추천 색상을 분석 중입니다...</Description>
+        </LoadingIndicator>
+      </DescriptionWrapper>
     );
-  };
+  }
 
-  // 버튼 렌더링
-  const renderRecommendButton = () => (
-    <RecommendButton onClick={handleRecommendation} disabled={isLoading}>
-      <FiShare2 />
-      {isLoading ? '추천 중...' : '추천받기'}
-      {isLoading && <LoadingSpinner />}
-    </RecommendButton>
-  );
+  // 추천 결과가 없을 때 표시할 빈 상태 컴포넌트
+  if (!recommendationResult) {
+    return (
+      <DescriptionWrapper>
+        <EmptyState>
+          <EmptyIcon>🎨</EmptyIcon>
+          <Description>
+            키보드를 커스터마이징하고 "추천받기" 버튼을 클릭하면 AI가 추천하는 색상 조합을 볼 수 있습니다.
+          </Description>
+        </EmptyState>
+      </DescriptionWrapper>
+    );
+  }
+
+  // 추천된 키보드 정보 가져오기
+  const keyboards = recommendationResult.data?.keyboards || [];
+  const descriptions = recommendationResult.data?.description || [];
 
   return (
-    <RecommendationContainer>
-      {renderRecommendButton()}
-      {renderRecommendationResults()}
-    </RecommendationContainer>
+    <DescriptionWrapper>
+      <Title>AI 추천 결과</Title>
+      <Description>{recommendationResult.message}</Description>
+      
+      {keyboards.length > 0 && (
+        <RecommendationSection>
+          <SectionTitle>추천 색상 조합</SectionTitle>
+          {keyboards.map((keyboard, index) => (
+            <ColorCombination key={index}>
+              <ComboTitle>조합 {index + 1}</ComboTitle>
+              <ColorItem>
+                <ColorSwatch color={keyboard.barebone} />
+                <span>베어본: {keyboard.barebone}</span>
+              </ColorItem>
+              <ColorItem>
+                <ColorSwatch color={keyboard.keycap} />
+                <span>키캡: {keyboard.keycap}</span>
+              </ColorItem>
+              <ColorItem>
+                <ColorSwatch color={keyboard.switch} />
+                <span>스위치: {keyboard.switch}</span>
+              </ColorItem>
+            </ColorCombination>
+          ))}
+        </RecommendationSection>
+      )}
+      
+      {descriptions.length > 0 && (
+        <RecommendationSection>
+          <SectionTitle>키보드 설명</SectionTitle>
+          {descriptions.map((desc, index) => (
+            <DescriptionText key={index}>{desc}</DescriptionText>
+          ))}
+        </RecommendationSection>
+      )}
+    </DescriptionWrapper>
   );
 };
