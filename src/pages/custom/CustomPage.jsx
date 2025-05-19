@@ -8,6 +8,8 @@ import { KeycapArray } from "./KeycapArray";
 import { useAuthStore } from "../../api/useAuthStore";
 import { saveItem } from "../../api/saveItem";
 import { KeyboardModal } from "../../components/modal/KeyboardModal";
+import { fetchKeyboardRecommendation } from "../../api/recommendation";
+import { KEYCAP_IDS } from "../../data/KeycapID";
 import { HexColorPicker } from "react-colorful";
 
 const Container = styled.div`
@@ -70,13 +72,19 @@ const SelectContainer = styled.div`
 
 const ThreeDContainer = styled.div`
   display: flex;
-  width: 85%;
+  width: 68%;
   height: 100%;
   position: relative;
   overflow: hidden;
   justify-content: center;
   align-items: center;
 `;
+
+const DescriptionContainer = styled.div`
+  display: flex;
+  width: 17%;
+  height: 100%;
+`
 
 const CustomFrame = styled.div`
   position: relative;
@@ -85,7 +93,8 @@ const CustomFrame = styled.div`
   display: flex;
   justify-content: center;
   align-items: center;
-  background-color: #e9ecef;
+  background-color: ${props => props.isDarkMode ? '#121212' : '#e9ecef'};
+  transition: background-color 0.5s ease;
 `;
 
 const SelectFrame = styled.div`
@@ -195,6 +204,43 @@ const ColorInput = styled.input`
   font-size: 14px;
 `;
 
+// LED 버튼을 SelectFrame 외부에 배치하기 위한 컨테이너
+const LedButtonContainer = styled.div`
+  position: absolute;
+  top: 30px;
+  left: 30px;
+  z-index: 20;
+`;
+
+const LedButton = styled.button`
+  padding: 12px 20px;
+  background-color: ${props => props.active ? '#00ffff' : '#333'};
+  color: ${props => props.active ? '#000' : '#fff'};
+  border: none;
+  border-radius: 5px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: ${props => props.active ? '0 0 15px #00ffff' : 'none'};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  &:hover {
+    background-color: ${props => props.active ? '#66ffff' : '#444'};
+  }
+`;
+
+// LED 아이콘 컴포넌트
+const LedIcon = styled.div`
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: ${props => props.active ? '#00ffff' : '#666'};
+  box-shadow: ${props => props.active ? '0 0 10px #00ffff' : 'none'};
+  margin-right: 8px;
+`;
+
 export const CustomPage = () => {
   const { size } = useParams();
   const { user } = useAuthStore();
@@ -222,6 +268,25 @@ export const CustomPage = () => {
   
   // 키캡 색상 상태 관리 - 키 ID를 색상에 매핑
   const [keycapColors, setKeycapColors] = useState({});
+
+  // LED 상태 관리
+  const [ledEnabled, setLedEnabled] = useState(false);
+  
+  // AI 추천 로딩 상태 추가
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // AI 추천 결과 및 설명 상태 추가
+  const [recommendationResult, setRecommendationResult] = useState(null);
+
+  // LED 토글 핸들러 추가
+  const handleLedToggle = () => {
+    setLedEnabled(prev => !prev);
+    
+    // ThreeDModel의 LED 상태 토글
+    if (modelRef.current && modelRef.current.toggleLed) {
+      modelRef.current.toggleLed();
+    }
+  };
 
   const handleModelSelect = (modelType) => {
     setPrevSelectedModel(selectedModel);
@@ -266,11 +331,81 @@ export const CustomPage = () => {
   };
 
   // 다시 시작하기 확인 처리 - 완전히 초기화하고 모델 리렌더링
-const handleConfirmRestart = () => {
-  setRestartModalOpen(false);
-  
-  // 페이지 새로고침 실행
-  window.location.reload();
+  const handleConfirmRestart = () => {
+    setRestartModalOpen(false);
+    
+    // 페이지 새로고침 실행
+    window.location.reload();
+  };
+
+ const handleRecommendation = async () => {
+  try {
+    setIsLoading(true);
+
+    const result = await fetchKeyboardRecommendation({
+      size,
+      baseColor,
+      switchColor,
+      keycapColors,
+    });
+
+    if (result.status === "OK") {
+      // 전체 응답 결과를 저장
+      setRecommendationResult(result);
+      
+      const recommendedKeyboard = result.data.keyboards[0];
+
+      if (recommendedKeyboard) {
+        // 베어본 색상 업데이트
+        if (recommendedKeyboard.barebone) {
+          setBaseColor(recommendedKeyboard.barebone);
+        }
+
+        // 스위치 색상 업데이트 및 스위치 모델 표시 설정
+        if (recommendedKeyboard.switch) {
+          setSwitchColor(recommendedKeyboard.switch);
+          // 스위치 모델 표시 설정
+          setSelectedModel("switch");
+          setTimeout(() => {
+            // 키캡 모델 표시 설정 (스위치 표시 후 키캡 표시)
+            setSelectedModel("keycap");
+          }, 1000); // 1초 후에 키캡 표시
+        }
+
+        // 키캡 색상 업데이트
+        if (recommendedKeyboard.keycap) {
+          // 모든 키캡에 동일한 색상 적용
+          const keycapIds = Object.keys(keycapColors).length > 0 
+            ? Object.keys(keycapColors) 
+            : (KEYCAP_IDS[size] || []);
+            
+          const newKeycapColors = {};
+          keycapIds.forEach(id => {
+            newKeycapColors[id] = recommendedKeyboard.keycap;
+          });
+          
+          // 키캡 색상 상태 업데이트
+          setKeycapColors(newKeycapColors);
+          
+          // 3D 모델에 키캡 색상 직접 업데이트
+          if (modelRef.current && modelRef.current.updateKeycapColor) {
+            keycapIds.forEach(id => {
+              modelRef.current.updateKeycapColor(id, recommendedKeyboard.keycap);
+            });
+          }
+        }
+
+        alert(result.message || "AI가 새로운 색상을 추천했습니다!");
+      }
+    } else {
+      alert("추천 색상을 가져오는 데 실패했습니다.");
+    }
+  } catch (error) {
+    console.error(error);
+    alert(error.message);
+  } finally {
+    setIsLoading(false);
+  }
 };
 
   const handleSaveClick = async () => {
@@ -319,6 +454,7 @@ const handleConfirmRestart = () => {
       keyboardtype: size,
       keycapcolors: keycapColors, // 키캡 색상 정보를 객체로 저장
       switchcolor: switchColor, // 스위치 색상 정보 업데이트
+      ledEnabled: ledEnabled, // LED 상태 추가
     };
 
     // FormData에 JSON 추가
@@ -381,6 +517,74 @@ const handleConfirmRestart = () => {
     setKeycapColors({});
   }, []);
 
+  // 추천 결과에서 설명 텍스트 렌더링 함수
+  const renderDescription = () => {
+    if (!recommendationResult) {
+      return <p>키보드를 커스터마이징하고 "추천받기" 버튼을 클릭하면 AI가 추천하는 색상 조합을 볼 수 있습니다.</p>;
+    }
+
+    // 추천된 키보드 정보 가져오기
+    const keyboards = recommendationResult.data?.keyboards || [];
+    const descriptions = recommendationResult.data?.description || [];
+
+    return (
+      <div>
+        <h3>AI 추천 결과</h3>
+        <p>{recommendationResult.message}</p>
+        
+        {keyboards.length > 0 && (
+          <div>
+            <h4>추천 색상 조합</h4>
+            {keyboards.map((keyboard, index) => (
+              <div key={index} style={{ marginBottom: '15px' }}>
+                <p><strong>조합 {index + 1}</strong></p>
+                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '5px' }}>
+                  <div style={{ 
+                    width: '20px', 
+                    height: '20px', 
+                    backgroundColor: keyboard.barebone, 
+                    marginRight: '10px',
+                    border: '1px solid #ddd'
+                  }}></div>
+                  <span>베어본: {keyboard.barebone}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '5px' }}>
+                  <div style={{ 
+                    width: '20px', 
+                    height: '20px', 
+                    backgroundColor: keyboard.keycap, 
+                    marginRight: '10px',
+                    border: '1px solid #ddd'
+                  }}></div>
+                  <span>키캡: {keyboard.keycap}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <div style={{ 
+                    width: '20px', 
+                    height: '20px', 
+                    backgroundColor: keyboard.switch, 
+                    marginRight: '10px',
+                    border: '1px solid #ddd'
+                  }}></div>
+                  <span>스위치: {keyboard.switch}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        
+        {descriptions.length > 0 && (
+          <div>
+            <h4>키보드 설명</h4>
+            {descriptions.map((desc, index) => (
+              <p key={index}>{desc}</p>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <Container>
       <HeaderLine />
@@ -395,9 +599,9 @@ const handleConfirmRestart = () => {
             <FiRefreshCw />
             다시 시작하기
           </IconButton>
-          <IconButton>
+          <IconButton onClick={handleRecommendation} disabled={isLoading}>
             <FiShare2 />
-            공유하기
+            {isLoading ? '추천 중...' : '추천받기'}
           </IconButton>
           <SaveButton onClick={handleSaveClick}>
             <FiSave />
@@ -406,7 +610,7 @@ const handleConfirmRestart = () => {
         </RightSection>
       </HeaderFrame>
 
-      <CustomFrame>
+      <CustomFrame isDarkMode={ledEnabled}>
         <SelectContainer>
           <SelectFrame>
             <SelectOption
@@ -468,8 +672,24 @@ const handleConfirmRestart = () => {
             baseColor={baseColor}
             switchColor={switchColor}
             keycapColors={keycapColors} // 키캡 색상 정보 전달
+            ledEnabled={ledEnabled} // LED 상태 전달
           />
         </ThreeDContainer>
+
+        {/* LED 버튼을 밖으로 이동 */}
+        <LedButtonContainer>
+          <LedButton 
+            onClick={handleLedToggle}
+            active={ledEnabled}
+          >
+            <LedIcon active={ledEnabled} />
+            LED {ledEnabled ? "OFF" : "ON"}
+          </LedButton>
+        </LedButtonContainer>
+
+        <DescriptionContainer>
+          {renderDescription()}
+        </DescriptionContainer>
       </CustomFrame>
 
       {/* 다시 시작하기 모달 */}

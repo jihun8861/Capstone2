@@ -15,6 +15,7 @@ import { ScreenshotHandler } from "./ScreenshotHandler";
 import { ShadowLimiter } from "./ShadowLimiter";
 import { KeyboardOrbitControls } from "./KeyboardOrbitControls";
 import { EffectComposer, Bloom } from "@react-three/postprocessing";
+import * as THREE from "three";
 
 const Container = styled.div`
   width: 100%;
@@ -82,17 +83,18 @@ const Model = ({
   switchColor,
   resetStatus,
   keycapColors = {},
+  ledEnabled = false,
 }) => {
   const [baseAnimationProgress, setBaseAnimationProgress] = useState(0);
   const [switchAnimationProgress, setSwitchAnimationProgress] = useState(0);
   const [keycapAnimationProgress, setKeycapAnimationProgress] = useState(0);
-  const [engravingAnimationProgress, setEngravingAnimationProgress] =
-    useState(0);
+  const [engravingAnimationProgress, setEngravingAnimationProgress] = useState(0);
   const [showSwitch, setShowSwitch] = useState(false);
   const [showKeycap, setShowKeycap] = useState(false);
   const [showEngraving, setShowEngraving] = useState(false);
   const [currentKeycapColors, setCurrentKeycapColors] = useState(keycapColors);
   const groupRef = useRef();
+  const pcbRef = useRef(); // PCB 모델에 대한 참조 추가
   const scale = KEYBOARD_POSITIONS.getScale(size);
 
   // 키보드 사이즈에 따른 중심점 오프셋
@@ -103,6 +105,21 @@ const Model = ({
   const switchAnimationExecuted = useRef({});
   const keycapAnimationExecuted = useRef({});
   const engravingAnimationExecuted = useRef({});
+
+  // LED 효과 적용
+  useEffect(() => {
+    if (pcbRef.current && pcbRef.current.material) {
+      if (ledEnabled) {
+        // LED가 켜진 경우 발광 효과 추가
+        pcbRef.current.material.emissive = new THREE.Color(0x00ffff) // 밝은 청록색
+        pcbRef.current.material.emissiveIntensity = 0.5;
+      } else {
+        // LED가 꺼진 경우 발광 효과 제거
+        pcbRef.current.material.emissive = new THREE.Color(0x000000);
+        pcbRef.current.material.emissiveIntensity = 0;
+      }
+    }
+  }, [ledEnabled]);
 
   // keycapColors prop이 변경되면 currentKeycapColors 상태를 업데이트하고 세션 스토리지에 저장
   useEffect(() => {
@@ -290,6 +307,10 @@ const Model = ({
           size={size}
           color={path.includes("5.TopCase.glb") ? baseColor : null}
           centerOffset={centerOffset}
+          // PCB 모델에 ref 전달
+          meshRef={path.includes("2.PCB.glb") ? pcbRef : null}
+          // PCB 모델에 ledEnabled 전달
+          ledEnabled={path.includes("2.PCB.glb") ? ledEnabled : false}
         />
       ))}
 
@@ -350,7 +371,7 @@ const Model = ({
 };
 
 export const ThreeDModel = forwardRef(
-  ({ size, selectedModel, baseColor, switchColor, keycapColors = {} }, ref) => {
+  ({ size, selectedModel, baseColor, switchColor = {} }, ref) => {
     const { size: urlSize } = useParams();
     const location = useLocation();
     const keyboardSize = size || urlSize || "100";
@@ -361,6 +382,8 @@ export const ThreeDModel = forwardRef(
     const [resetStatus, setResetStatus] = useState(false);
     const [resetCamera, setResetCamera] = useState(false);
     const [internalKeycapColors, setInternalKeycapColors] = useState({});
+
+    const [ledEnabled, setLedEnabled] = useState(false);
 
     // 컴포넌트 마운트 시 세션 스토리지에서 키캡 색상 정보 로드
     useEffect(() => {
@@ -424,6 +447,11 @@ export const ThreeDModel = forwardRef(
       }, 100);
     };
 
+    // LED 상태 토글 함수 추가
+    const toggleLed = () => {
+      setLedEnabled(prev => !prev);
+    };
+
     useImperativeHandle(ref, () => ({
       getScreenshot: () => {
         if (screenshotRef.current) {
@@ -431,24 +459,28 @@ export const ThreeDModel = forwardRef(
         }
         return null;
       },
-      // 다시 시작하기 기능 추가
+      // 다시 시작하기 기능
       resetModel: resetKeyboardModel,
-      // 키캡 색상 초기화 함수 수정
+      // 키캡 색상 초기화 함수
       resetKeycapColors: () => {
         setInternalKeycapColors({});
         clearKeycapColorsFromSession(validSize);
         // Model 컴포넌트에 변경사항 전달
         setResetStatus((prev) => !prev);
       },
-      // 모든 키캡 색상 초기화 함수 추가 (CustomPage에서 호출됨)
+      // 모든 키캡 색상 초기화 함수
       resetAllKeycapColors: () => {
         setInternalKeycapColors({});
         clearKeycapColorsFromSession(validSize);
         // Model 컴포넌트에 변경사항 전달
         setResetStatus((prev) => !prev);
       },
-      // 특정 키캡 색상 변경 함수 추가 (외부에서 호출 가능)
+      // 특정 키캡 색상 변경 함수
       updateKeycapColor: updateKeycapColor,
+      // LED 토글 함수 추가
+      toggleLed: toggleLed,
+      // LED 상태 getter
+      isLedEnabled: () => ledEnabled
     }));
 
     // 선택된 키보드 크기에 맞는 카메라 설정
@@ -507,16 +539,17 @@ export const ThreeDModel = forwardRef(
               baseColor={baseColor}
               switchColor={switchColor}
               resetStatus={resetStatus}
-              keycapColors={keycapColors}
+              keycapColors={internalKeycapColors}
+              ledEnabled={ledEnabled}
             />
 
-            {/* LED Bloom 효과 추가 - switch 모델이 선택된 경우에만 적용 */}
-            {selectedModel === "switch" && (
+            {/* LED가 활성화된 경우 bloom 효과 추가 */}
+            {ledEnabled && (
               <EffectComposer>
                 <Bloom
-                  luminanceThreshold={0.2}
-                  luminanceSmoothing={0.9}
-                  intensity={0.1}
+                  luminanceThreshold={0.5}
+                  luminanceSmoothing={0.7}
+                  intensity={0.7}
                 />
               </EffectComposer>
             )}
