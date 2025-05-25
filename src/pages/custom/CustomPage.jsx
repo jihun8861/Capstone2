@@ -435,73 +435,81 @@ export const CustomPage = () => {
   };
 
   const handleConfirmSave = async () => {
-    // 제목이 비어있는지 확인
-    if (!designTitle.trim()) {
-      alert("제목을 입력해주세요.");
-      return;
+  // 제목이 비어있는지 확인
+  if (!designTitle.trim()) {
+    alert("제목을 입력해주세요.");
+    return;
+  }
+  
+  setSaveModalOpen(false);
+
+  // FormData 객체 생성
+  const formData = new FormData();
+
+  // 사용자가 실제로 변경한 키캡 색상만 필터링
+  const filteredKeycapColors = {};
+  Object.keys(keycapColors).forEach(key => {
+    // 기본 색상(#ffffff)이 아닌 경우만 포함
+    if (keycapColors[key] && keycapColors[key] !== "#ffffff") {
+      filteredKeycapColors[key] = keycapColors[key];
     }
-    
-    setSaveModalOpen(false);
+  });
 
-    // FormData 객체 생성
-    const formData = new FormData();
-
-    // JSON 데이터 생성 - 제목과 스위치 색상 정보 추가
-    const jsonData = {
-      email: user.email,
-      title: designTitle, // 제목 정보 추가
-      barebonecolor: baseColor,
-      keyboardtype: size,
-      keycapcolors: keycapColors, // 키캡 색상 정보를 객체로 저장
-      switchcolor: switchColor, // 스위치 색상 정보 업데이트
-      ledEnabled: ledEnabled, // LED 상태 추가
-    };
-
-    // FormData에 JSON 추가
-    formData.append(
-      "DTO",
-      new Blob([JSON.stringify(jsonData)], {
-        type: "application/json",
-      })
-    );
-
-    // Base64 이미지를 파일로 변환
-    if (modelImage) {
-      // Base64 데이터에서 실제 바이너리 데이터 추출 (data:image/png;base64, 부분 제거)
-      const imageData = modelImage.split(",")[1];
-      const byteCharacters = atob(imageData);
-      const byteArrays = [];
-
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteArrays.push(byteCharacters.charCodeAt(i));
-      }
-
-      const byteArray = new Uint8Array(byteArrays);
-      const blob = new Blob([byteArray], { type: "image/png" });
-
-      // 파일 이름 생성 (현재 시간 기준)
-      const fileName = `keyboard_${new Date().getTime()}.png`;
-      const file = new File([blob], fileName, { type: "image/png" });
-
-      // FormData에 파일 추가
-      formData.append("file", file);
-    }
-
-    try {
-      // saveItem 함수 수정 필요 - FormData를 전송할 수 있도록
-      const result = await saveItem(formData);
-
-      if (result.success) {
-        alert("저장이 완료되었습니다.");
-      } else {
-        console.error("저장 실패:", result.error);
-        alert(`저장 중 오류가 발생했습니다: ${result.message}`);
-      }
-    } catch (error) {
-      console.error("저장 중 예외 발생:", error);
-      alert("저장 중 오류가 발생했습니다.");
-    }
+  // JSON 데이터 생성 - 새로운 API 형식에 맞게 수정
+  const jsonData = {
+    email: user.email,
+    title: designTitle,
+    barebonecolor: baseColor,
+    keyboardtype: size,
+    keycapcolor: filteredKeycapColors, // keycapcolors에서 keycapcolor로 변경
+    switchcolor: switchColor,
   };
+
+  // FormData에 JSON 추가
+  formData.append(
+    "DTO",
+    new Blob([JSON.stringify(jsonData)], {
+      type: "application/json",
+    })
+  );
+
+  // Base64 이미지를 파일로 변환
+  if (modelImage) {
+    // Base64 데이터에서 실제 바이너리 데이터 추출 (data:image/png;base64, 부분 제거)
+    const imageData = modelImage.split(",")[1];
+    const byteCharacters = atob(imageData);
+    const byteArrays = [];
+
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteArrays.push(byteCharacters.charCodeAt(i));
+    }
+
+    const byteArray = new Uint8Array(byteArrays);
+    const blob = new Blob([byteArray], { type: "image/png" });
+
+    // 파일 이름 생성 (현재 시간 기준)
+    const fileName = `keyboard_${new Date().getTime()}.png`;
+    const file = new File([blob], fileName, { type: "image/png" });
+
+    // FormData에 파일 추가
+    formData.append("file", file);
+  }
+
+  try {
+    // saveItem 함수 호출
+    const result = await saveItem(formData);
+
+    if (result.success) {
+      alert("저장이 완료되었습니다.");
+    } else {
+      console.error("저장 실패:", result.error);
+      alert(`저장 중 오류가 발생했습니다: ${result.message}`);
+    }
+  } catch (error) {
+    console.error("저장 중 예외 발생:", error);
+    alert("저장 중 오류가 발생했습니다.");
+  }
+};
 
   useEffect(() => {
     if (selectedModel) {
