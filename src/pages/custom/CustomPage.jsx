@@ -461,15 +461,25 @@ export const CustomPage = () => {
     return switchName;
   };
 
- const handleRecommendation = async () => {
+const handleRecommendation = async () => {
   try {
     setIsLoading(true);
 
+    // **1. 세션 스토리지 초기화 (키캡 색상 저장 데이터 제거)**
+    // 실제 세션 스토리지 사용 시 활성화
+    // sessionStorage.removeItem('keycapColors');
+    // sessionStorage.removeItem('keyboardDesign');
+    // localStorage.removeItem('keyboardCustom');
+    
+    // **2. 메모리상 키캡 색상 데이터만 초기화**
+    const cleanKeycapColors = {};
+
+    // **3. 추천 요청 (현재 베어본, 스위치 색상 + 빈 키캡 색상으로)**
     const result = await fetchKeyboardRecommendation({
       size,
       baseColor,
       switchColor,
-      keycapColors,
+      keycapColors: cleanKeycapColors, // 빈 객체로 요청
     });
 
     if (result.status === "OK") {
@@ -481,55 +491,53 @@ export const CustomPage = () => {
       const recommendedKeyboard = result.data.keyboards[0];
 
       if (recommendedKeyboard) {
-        // 베어본 색상 업데이트
+        // **4. 베어본 색상 업데이트**
         if (recommendedKeyboard.barebone) {
           setBaseColor(recommendedKeyboard.barebone);
+          // 3D 모델에 즉시 적용
+          if (modelRef.current && modelRef.current.updateBaseColor) {
+            modelRef.current.updateBaseColor(recommendedKeyboard.barebone);
+          }
         }
 
-        // 스위치 색상 업데이트 및 스위치 모델 표시 설정
+        // **5. 스위치 색상 업데이트**
         if (recommendedKeyboard.switch) {
-          // 축 이름을 색상으로 변환
           const switchColorValue = getSwitchColorFromName(recommendedKeyboard.switch);
           setSwitchColor(switchColorValue);
-          // 스위치 모델 표시 설정
-          setSelectedModel("switch");
-          setTimeout(() => {
-            // 키캡 모델 표시 설정 (스위치 표시 후 키캡 표시)
-            setSelectedModel("keycap");
-          }, 1000); // 1초 후에 키캡 표시
+          // 3D 모델에 즉시 적용
+          if (modelRef.current && modelRef.current.updateSwitchColor) {
+            modelRef.current.updateSwitchColor(switchColorValue);
+          }
         }
 
-        // 키캡 색상 업데이트 - **핵심 수정사항**
+        // **6. 키캡 색상 업데이트**
         if (recommendedKeyboard.keycap) {
-          // 모든 키캡에 동일한 색상 적용
-          const keycapIds = Object.keys(keycapColors).length > 0 
-            ? Object.keys(keycapColors) 
-            : (KEYCAP_IDS[size] || []);
-            
+          const keycapIds = KEYCAP_IDS[size] || [];
           const newKeycapColors = {};
           keycapIds.forEach(id => {
             newKeycapColors[id] = recommendedKeyboard.keycap;
           });
           
-          // **1. 먼저 상태 업데이트**
+          // 상태 업데이트
           setKeycapColors(newKeycapColors);
           
-          // **2. 3D 모델에 직접 업데이트 - 새로운 방식**
-          if (modelRef.current && modelRef.current.updateAllKeycapColors) {
-            // 새로 추가한 함수 사용
-            modelRef.current.updateAllKeycapColors(newKeycapColors);
-          }
-          
-          // **3. 개별 키캡 색상 업데이트 (백업용)**
-          if (modelRef.current && modelRef.current.updateKeycapColor) {
-            keycapIds.forEach(id => {
-              modelRef.current.updateKeycapColor(id, recommendedKeyboard.keycap);
-            });
-          }
-
-          // **4. 키캡 모델이 표시되도록 강제 설정**
+          // 키캡 모델 표시 상태로 전환
           setSelectedModel("keycap");
-          setShowKeycapArray(true); // 키캡 배열 표시
+          setShowKeycapArray(true);
+          setShowColorPicker(false);
+          
+          // 3D 모델에 키캡 색상 적용
+          setTimeout(() => {
+            if (modelRef.current) {
+              if (modelRef.current.updateAllKeycapColors) {
+                modelRef.current.updateAllKeycapColors(newKeycapColors);
+              } else if (modelRef.current.updateKeycapColor) {
+                keycapIds.forEach(id => {
+                  modelRef.current.updateKeycapColor(id, recommendedKeyboard.keycap);
+                });
+              }
+            }
+          }, 300); // 짧은 딜레이로 적용
         }
 
         alert(result.message || "AI가 새로운 색상을 추천했습니다!");
