@@ -371,7 +371,7 @@ const Model = ({
 };
 
 export const ThreeDModel = forwardRef(
-  ({ size, selectedModel, baseColor, switchColor = {} }, ref) => {
+  ({ size, selectedModel, baseColor, switchColor = {}, keycapColors = {} }, ref) => {
     const { size: urlSize } = useParams();
     const location = useLocation();
     const keyboardSize = size || urlSize || "100";
@@ -390,6 +390,15 @@ export const ThreeDModel = forwardRef(
       const savedColors = getKeycapColorsFromSession(validSize);
       setInternalKeycapColors(savedColors);
     }, [validSize]);
+
+    // **추가: 부모로부터 받은 keycapColors prop을 internalKeycapColors에 동기화**
+    useEffect(() => {
+      if (keycapColors && Object.keys(keycapColors).length > 0) {
+        console.log("부모로부터 받은 keycapColors:", keycapColors);
+        setInternalKeycapColors(keycapColors);
+        saveKeycapColorsToSession(validSize, keycapColors);
+      }
+    }, [keycapColors, validSize]);
 
     // 페이지 변경 감지 및 세션 스토리지 초기화
     useEffect(() => {
@@ -421,13 +430,6 @@ export const ThreeDModel = forwardRef(
         }
       };
     }, [validSize, location.pathname]);
-
-    // 키캡 색상 업데이트 함수
-    const updateKeycapColor = (keycapId, color) => {
-      const newColors = { ...internalKeycapColors, [keycapId]: color };
-      setInternalKeycapColors(newColors);
-      saveKeycapColorsToSession(validSize, newColors);
-    };
 
     // 모든 키캡 색상 초기화 함수
     const resetKeycapColors = () => {
@@ -475,8 +477,18 @@ export const ThreeDModel = forwardRef(
         // Model 컴포넌트에 변경사항 전달
         setResetStatus((prev) => !prev);
       },
-      // 특정 키캡 색상 변경 함수
-      updateKeycapColor: updateKeycapColor,
+      // 특정 키캡 색상 변경 함수 - **부모의 keycapColors와 동기화**
+      updateKeycapColor: (keycapId, color) => {
+        const newColors = { ...internalKeycapColors, [keycapId]: color };
+        setInternalKeycapColors(newColors);
+        saveKeycapColorsToSession(validSize, newColors);
+      },
+      // **추가: 전체 키캡 색상을 한번에 업데이트하는 함수**
+      updateAllKeycapColors: (newColors) => {
+        console.log("updateAllKeycapColors 호출됨:", newColors);
+        setInternalKeycapColors(newColors);
+        saveKeycapColorsToSession(validSize, newColors);
+      },
       // LED 토글 함수 추가
       toggleLed: toggleLed,
       // LED 상태 getter

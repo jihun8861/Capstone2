@@ -72,19 +72,47 @@ const SelectContainer = styled.div`
 
 const ThreeDContainer = styled.div`
   display: flex;
-  width: 68%;
+  width: ${props => props.showDescription ? '68%' : '85%'};
   height: 100%;
   position: relative;
   overflow: hidden;
   justify-content: center;
   align-items: center;
+  transition: width 0.3s ease;
 `;
 
 const DescriptionContainer = styled.div`
-  display: flex;
-  width: 17%;
+  display: ${props => props.show ? 'flex' : 'none'};
+  width: ${props => props.show ? '17%' : '0'};
   height: 100%;
-`
+  padding: ${props => props.show ? '20px' : '0'};
+  background-color: white;
+  border-left: ${props => props.show ? 'solid 1px #ddd' : 'none'};
+  transition: all 0.3s ease;
+  overflow-y: auto;
+  flex-direction: column;
+  
+  h3 {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 15px;
+    color: #333;
+  }
+  
+  h4 {
+    font-size: 16px;
+    font-weight: bold;
+    margin: 15px 0 10px 0;
+    color: #444;
+  }
+  
+  p {
+    font-size: 14px;
+    line-height: 1.5;
+    color: #666;
+    margin-bottom: 10px;
+  }
+`;
 
 const CustomFrame = styled.div`
   position: relative;
@@ -241,6 +269,44 @@ const LedIcon = styled.div`
   margin-right: 8px;
 `;
 
+// 스위치 설명 관련 스타일 컴포넌트 추가
+const SwitchInfo = styled.div`
+  margin-bottom: 30px;
+  padding: 15px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+`;
+
+const SwitchHeader = styled.div`
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+`;
+
+const SwitchColorBox = styled.div`
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  margin-right: 10px;
+  border: 1px solid #ddd;
+  background-color: ${props => props.color};
+`;
+
+const SwitchName = styled.h4`
+  margin: 0;
+  font-size: 16px;
+  font-weight: bold;
+  color: #333;
+`;
+
+const SwitchDescription = styled.p`
+  margin: 5px 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #666;
+`;
+
 export const CustomPage = () => {
   const { size } = useParams();
   const { user } = useAuthStore();
@@ -277,6 +343,33 @@ export const CustomPage = () => {
   
   // AI 추천 결과 및 설명 상태 추가
   const [recommendationResult, setRecommendationResult] = useState(null);
+  
+  // 추천 설명 표시 상태 추가
+  const [showDescription, setShowDescription] = useState(false);
+
+  // 스위치 정보 데이터
+  const switchData = [
+    {
+      name: "청축",
+      color: "#0000FF",
+      description: "클릭감이 강하고 소리가 큰 스위치입니다. 타이핑할 때 '딸깍' 소리가 나며, 게이밍보다는 타이핑 작업에 적합합니다."
+    },
+    {
+      name: "적축",
+      color: "#FF0000", 
+      description: "선형 스위치로 부드럽고 조용합니다. 키를 누르는 저항감이 일정하여 게이밍에 많이 사용됩니다."
+    },
+    {
+      name: "갈축",
+      color: "#8B4513",
+      description: "촉각 피드백이 있지만 청축보다 조용합니다. 타이핑과 게이밍 모두에 적합한 만능 스위치입니다."
+    },
+    {
+      name: "흑축",
+      color: "#000000",
+      description: "적축보다 더 무거운 선형 스위치입니다. 오타를 줄이고 싶거나 더 묵직한 타이핑감을 원하는 사용자에게 적합합니다."
+    }
+  ];
 
   // LED 토글 핸들러 추가
   const handleLedToggle = () => {
@@ -296,12 +389,21 @@ export const CustomPage = () => {
     if (modelType === "barebone") {
       setShowColorPicker(true);
       setShowKeycapArray(false);
+      setShowDescription(false); // 베어본 선택 시 설명 숨김
     } else if (modelType === "keycap") {
       setShowColorPicker(false);
       setShowKeycapArray(true);
+      setShowDescription(false); // 키캡 선택 시 설명 숨김
+    } else if (modelType === "switch") {
+      setShowColorPicker(false);
+      setShowKeycapArray(false);
+      setShowDescription(true); // 스위치 선택 시 설명 표시
+      // 추천 결과 초기화 (스위치 설명을 보여주기 위해)
+      setRecommendationResult(null);
     } else {
       setShowColorPicker(false);
       setShowKeycapArray(false);
+      setShowDescription(false);
     }
   };
 
@@ -338,61 +440,104 @@ export const CustomPage = () => {
     window.location.reload();
   };
 
- const handleRecommendation = async () => {
+ // 축 이름을 색상으로 매핑하는 함수
+  const getSwitchColorFromName = (switchName) => {
+    const switchColorMap = {
+      "청축": "#0066cc",
+      "적축": "#cc0000", 
+      "갈축": "#8b4513",
+      "흑축": "#000000",
+      "백축": "#ffffff"
+    };
+    
+    // switchName이 축 이름인지 확인하고 해당 색상 반환
+    for (const [axisName, color] of Object.entries(switchColorMap)) {
+      if (switchName && switchName.includes(axisName)) {
+        return color;
+      }
+    }
+    
+    // 축 이름이 아니면 원래 값 반환 (색상 코드인 경우)
+    return switchName;
+  };
+
+const handleRecommendation = async () => {
   try {
     setIsLoading(true);
 
+    // **1. 세션 스토리지 초기화 (키캡 색상 저장 데이터 제거)**
+    // 실제 세션 스토리지 사용 시 활성화
+    // sessionStorage.removeItem('keycapColors');
+    // sessionStorage.removeItem('keyboardDesign');
+    // localStorage.removeItem('keyboardCustom');
+    
+    // **2. 메모리상 키캡 색상 데이터만 초기화**
+    const cleanKeycapColors = {};
+
+    // **3. 추천 요청 (현재 베어본, 스위치 색상 + 빈 키캡 색상으로)**
     const result = await fetchKeyboardRecommendation({
       size,
       baseColor,
       switchColor,
-      keycapColors,
+      keycapColors: cleanKeycapColors, // 빈 객체로 요청
     });
 
     if (result.status === "OK") {
       // 전체 응답 결과를 저장
       setRecommendationResult(result);
+      // 추천 설명 표시 상태를 true로 설정
+      setShowDescription(true);
       
       const recommendedKeyboard = result.data.keyboards[0];
 
       if (recommendedKeyboard) {
-        // 베어본 색상 업데이트
+        // **4. 베어본 색상 업데이트**
         if (recommendedKeyboard.barebone) {
           setBaseColor(recommendedKeyboard.barebone);
+          // 3D 모델에 즉시 적용
+          if (modelRef.current && modelRef.current.updateBaseColor) {
+            modelRef.current.updateBaseColor(recommendedKeyboard.barebone);
+          }
         }
 
-        // 스위치 색상 업데이트 및 스위치 모델 표시 설정
+        // **5. 스위치 색상 업데이트**
         if (recommendedKeyboard.switch) {
-          setSwitchColor(recommendedKeyboard.switch);
-          // 스위치 모델 표시 설정
-          setSelectedModel("switch");
-          setTimeout(() => {
-            // 키캡 모델 표시 설정 (스위치 표시 후 키캡 표시)
-            setSelectedModel("keycap");
-          }, 1000); // 1초 후에 키캡 표시
+          const switchColorValue = getSwitchColorFromName(recommendedKeyboard.switch);
+          setSwitchColor(switchColorValue);
+          // 3D 모델에 즉시 적용
+          if (modelRef.current && modelRef.current.updateSwitchColor) {
+            modelRef.current.updateSwitchColor(switchColorValue);
+          }
         }
 
-        // 키캡 색상 업데이트
+        // **6. 키캡 색상 업데이트**
         if (recommendedKeyboard.keycap) {
-          // 모든 키캡에 동일한 색상 적용
-          const keycapIds = Object.keys(keycapColors).length > 0 
-            ? Object.keys(keycapColors) 
-            : (KEYCAP_IDS[size] || []);
-            
+          const keycapIds = KEYCAP_IDS[size] || [];
           const newKeycapColors = {};
           keycapIds.forEach(id => {
             newKeycapColors[id] = recommendedKeyboard.keycap;
           });
           
-          // 키캡 색상 상태 업데이트
+          // 상태 업데이트
           setKeycapColors(newKeycapColors);
           
-          // 3D 모델에 키캡 색상 직접 업데이트
-          if (modelRef.current && modelRef.current.updateKeycapColor) {
-            keycapIds.forEach(id => {
-              modelRef.current.updateKeycapColor(id, recommendedKeyboard.keycap);
-            });
-          }
+          // 키캡 모델 표시 상태로 전환
+          setSelectedModel("keycap");
+          setShowKeycapArray(true);
+          setShowColorPicker(false);
+          
+          // 3D 모델에 키캡 색상 적용
+          setTimeout(() => {
+            if (modelRef.current) {
+              if (modelRef.current.updateAllKeycapColors) {
+                modelRef.current.updateAllKeycapColors(newKeycapColors);
+              } else if (modelRef.current.updateKeycapColor) {
+                keycapIds.forEach(id => {
+                  modelRef.current.updateKeycapColor(id, recommendedKeyboard.keycap);
+                });
+              }
+            }
+          }, 300); // 짧은 딜레이로 적용
         }
 
         alert(result.message || "AI가 새로운 색상을 추천했습니다!");
@@ -435,73 +580,81 @@ export const CustomPage = () => {
   };
 
   const handleConfirmSave = async () => {
-    // 제목이 비어있는지 확인
-    if (!designTitle.trim()) {
-      alert("제목을 입력해주세요.");
-      return;
+  // 제목이 비어있는지 확인
+  if (!designTitle.trim()) {
+    alert("제목을 입력해주세요.");
+    return;
+  }
+  
+  setSaveModalOpen(false);
+
+  // FormData 객체 생성
+  const formData = new FormData();
+
+  // 사용자가 실제로 변경한 키캡 색상만 필터링
+  const filteredKeycapColors = {};
+  Object.keys(keycapColors).forEach(key => {
+    // 기본 색상(#ffffff)이 아닌 경우만 포함
+    if (keycapColors[key] && keycapColors[key] !== "#ffffff") {
+      filteredKeycapColors[key] = keycapColors[key];
     }
-    
-    setSaveModalOpen(false);
+  });
 
-    // FormData 객체 생성
-    const formData = new FormData();
-
-    // JSON 데이터 생성 - 제목과 스위치 색상 정보 추가
-    const jsonData = {
-      email: user.email,
-      title: designTitle, // 제목 정보 추가
-      barebonecolor: baseColor,
-      keyboardtype: size,
-      keycapcolors: keycapColors, // 키캡 색상 정보를 객체로 저장
-      switchcolor: switchColor, // 스위치 색상 정보 업데이트
-      ledEnabled: ledEnabled, // LED 상태 추가
-    };
-
-    // FormData에 JSON 추가
-    formData.append(
-      "DTO",
-      new Blob([JSON.stringify(jsonData)], {
-        type: "application/json",
-      })
-    );
-
-    // Base64 이미지를 파일로 변환
-    if (modelImage) {
-      // Base64 데이터에서 실제 바이너리 데이터 추출 (data:image/png;base64, 부분 제거)
-      const imageData = modelImage.split(",")[1];
-      const byteCharacters = atob(imageData);
-      const byteArrays = [];
-
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteArrays.push(byteCharacters.charCodeAt(i));
-      }
-
-      const byteArray = new Uint8Array(byteArrays);
-      const blob = new Blob([byteArray], { type: "image/png" });
-
-      // 파일 이름 생성 (현재 시간 기준)
-      const fileName = `keyboard_${new Date().getTime()}.png`;
-      const file = new File([blob], fileName, { type: "image/png" });
-
-      // FormData에 파일 추가
-      formData.append("file", file);
-    }
-
-    try {
-      // saveItem 함수 수정 필요 - FormData를 전송할 수 있도록
-      const result = await saveItem(formData);
-
-      if (result.success) {
-        alert("저장이 완료되었습니다.");
-      } else {
-        console.error("저장 실패:", result.error);
-        alert(`저장 중 오류가 발생했습니다: ${result.message}`);
-      }
-    } catch (error) {
-      console.error("저장 중 예외 발생:", error);
-      alert("저장 중 오류가 발생했습니다.");
-    }
+  // JSON 데이터 생성 - 새로운 API 형식에 맞게 수정
+  const jsonData = {
+    email: user.email,
+    title: designTitle,
+    barebonecolor: baseColor,
+    keyboardtype: size,
+    keycapcolor: filteredKeycapColors, // keycapcolors에서 keycapcolor로 변경
+    switchcolor: switchColor,
   };
+
+  // FormData에 JSON 추가
+  formData.append(
+    "DTO",
+    new Blob([JSON.stringify(jsonData)], {
+      type: "application/json",
+    })
+  );
+
+  // Base64 이미지를 파일로 변환
+  if (modelImage) {
+    // Base64 데이터에서 실제 바이너리 데이터 추출 (data:image/png;base64, 부분 제거)
+    const imageData = modelImage.split(",")[1];
+    const byteCharacters = atob(imageData);
+    const byteArrays = [];
+
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteArrays.push(byteCharacters.charCodeAt(i));
+    }
+
+    const byteArray = new Uint8Array(byteArrays);
+    const blob = new Blob([byteArray], { type: "image/png" });
+
+    // 파일 이름 생성 (현재 시간 기준)
+    const fileName = `keyboard_${new Date().getTime()}.png`;
+    const file = new File([blob], fileName, { type: "image/png" });
+
+    // FormData에 파일 추가
+    formData.append("file", file);
+  }
+
+  try {
+    // saveItem 함수 호출
+    const result = await saveItem(formData);
+
+    if (result.success) {
+      alert("저장이 완료되었습니다.");
+    } else {
+      console.error("저장 실패:", result.error);
+      alert(`저장 중 오류가 발생했습니다: ${result.message}`);
+    }
+  } catch (error) {
+    console.error("저장 중 예외 발생:", error);
+    alert("저장 중 오류가 발생했습니다.");
+  }
+};
 
   useEffect(() => {
     if (selectedModel) {
@@ -517,10 +670,44 @@ export const CustomPage = () => {
     setKeycapColors({});
   }, []);
 
+
+const Test = styled.div`
+  display: flex;
+  flex-direction: column;
+  position: absolute;
+  width: 400px;
+  height: 90%;
+  background-color: #e9ecef;
+  top: 0;
+  right: 0;
+`
+  // 스위치 설명 렌더링 함수
+  const renderSwitchDescription = () => {
+    return (
+      <Test>
+        {switchData.map((switchInfo, index) => (
+          <SwitchInfo key={index}>
+            <SwitchHeader>
+              <SwitchColorBox color={switchInfo.color} />
+              <SwitchName>{switchInfo.name}</SwitchName>
+            </SwitchHeader>
+            <SwitchDescription>{switchInfo.description}</SwitchDescription>
+          </SwitchInfo>
+        ))}
+      </Test>
+    );
+  };
+
   // 추천 결과에서 설명 텍스트 렌더링 함수
   const renderDescription = () => {
+    // 스위치 모델이 선택되고 추천 결과가 없는 경우 스위치 설명 표시
+    if (selectedModel === "switch" && !recommendationResult) {
+      return renderSwitchDescription();
+    }
+
+    // 추천 결과가 있는 경우 추천 결과 표시
     if (!recommendationResult) {
-      return <p>키보드를 커스터마이징하고 "추천받기" 버튼을 클릭하면 AI가 추천하는 색상 조합을 볼 수 있습니다.</p>;
+      return null;
     }
 
     // 추천된 키보드 정보 가져오기
@@ -529,8 +716,6 @@ export const CustomPage = () => {
 
     return (
       <div>
-        <h3>AI 추천 결과</h3>
-        <p>{recommendationResult.message}</p>
         
         {keyboards.length > 0 && (
           <div>
@@ -562,7 +747,7 @@ export const CustomPage = () => {
                   <div style={{ 
                     width: '20px', 
                     height: '20px', 
-                    backgroundColor: keyboard.switch, 
+                    backgroundColor: getSwitchColorFromName(keyboard.switch), 
                     marginRight: '10px',
                     border: '1px solid #ddd'
                   }}></div>
@@ -625,7 +810,8 @@ export const CustomPage = () => {
             >
               스위치
             </SelectOption>
-            <SelectOption
+
+           <SelectOption
               selected={selectedModel === "keycap"}
               onClick={() => handleModelSelect("keycap")}
             >
@@ -663,7 +849,7 @@ export const CustomPage = () => {
           </SelectFrame>
         </SelectContainer>
 
-        <ThreeDContainer>
+        <ThreeDContainer showDescription={showDescription}>
           <ThreeDModel
             ref={modelRef}
             size={size}
@@ -687,7 +873,7 @@ export const CustomPage = () => {
           </LedButton>
         </LedButtonContainer>
 
-        <DescriptionContainer>
+        <DescriptionContainer show={showDescription}>
           {renderDescription()}
         </DescriptionContainer>
       </CustomFrame>

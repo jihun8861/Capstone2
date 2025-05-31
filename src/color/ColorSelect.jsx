@@ -20,9 +20,12 @@ const ColorZone = styled.div`
   }
 `;
 
+// 청(파랑), 적(빨강), 갈(갈색), 흑(검정)
 const defaultColors = [
-  "#FF5733", "#FFC300", "#FF33FF", "#33FF57", "#33A1FF",
-  "#8D33FF", "#FF5733", "#FFD700", "#00FA9A", "#DC143C"
+  "#0000FF", // 청
+  "#FF0000", // 적
+  "#8B4513", // 갈
+  "#000000"  // 흑
 ];
 
 export const ColorSelect = ({ colors = defaultColors, onColorSelect }) => {
