@@ -207,7 +207,9 @@ export const ItemFrame3 = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [userLikes, setUserLikes] = useState(new Set());
+  const [likingInProgress, setLikingInProgress] = useState(new Set()); // 좋아요 처리 중인 키보드 ID들
   const { user } = useAuthStore();
+  const userId = user?.id || "";
 
   // API 기본 URL 설정
   const API_BASE_URL =
@@ -218,21 +220,14 @@ export const ItemFrame3 = () => {
     fetchSharedKeyboards();
   }, []);
 
-  // 현재 사용자의 좋아요 상태 처리
+  // 사용자의 좋아요 상태 가져오기
   useEffect(() => {
-    if (user && user.id && keyboards.length > 0) {
-      // 좋아요한 키보드 ID 설정 - 서버에서 반환된 데이터 기반
-      const likedKeyboardIds = new Set();
-
-      // 여기서 사용자가 좋아요한 키보드를 식별하는 로직이 필요합니다
-      // API가 해당 사용자의 좋아요 정보를 제공한다면 그것을 사용하고,
-      // 그렇지 않다면 클라이언트에서 추적해야 합니다.
-
-      setUserLikes(likedKeyboardIds);
+    if (user && userId && keyboards.length > 0) {
+      fetchUserLikes();
     } else {
       setUserLikes(new Set());
     }
-  }, [user, keyboards]);
+  }, [user, keyboards, userId]);
 
   // 키보드 목록 가져오기 함수
   const fetchSharedKeyboards = async () => {
@@ -240,7 +235,9 @@ export const ItemFrame3 = () => {
       setLoading(true);
       setError(null);
 
-      const response = await axios.get(`${API_BASE_URL}/shareditems/find`);
+      const response = await axios.get(
+        "https://port-0-edcustom-lxx6l4ha4fc09fa0.sel5.cloudtype.app/shareditems/find"
+      );
 
       if (
         response.data &&
@@ -252,6 +249,7 @@ export const ItemFrame3 = () => {
           (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
         );
         setKeyboards(sortedKeyboards);
+        console.log("키보드 목록 로드 완료:", sortedKeyboards);
       } else {
         throw new Error(
           response.data?.message || "데이터를 불러오는데 실패했습니다."
@@ -265,70 +263,121 @@ export const ItemFrame3 = () => {
     }
   };
 
-  // 좋아요 처리 함수
-  const handleLike = async (keyboardId) => {
-    // 로그인 여부 확인
-    if (!user || !user.id) {
-      alert("좋아요를 누르려면 로그인이 필요합니다.");
+  // 사용자의 좋아요 목록 가져오기 함수
+  const fetchUserLikes = async () => {
+    if (!userId) {
+      console.log("userId가 없어서 좋아요 확인 스킵");
+      setUserLikes(new Set());
       return;
     }
 
     try {
-      // 현재 좋아요 상태 확인
-      const isCurrentlyLiked = userLikes.has(keyboardId);
-
-      // 낙관적 UI 업데이트 (UI를 먼저 변경)
-      setUserLikes((prev) => {
-        const newLikes = new Set(prev);
-        if (isCurrentlyLiked) {
-          newLikes.delete(keyboardId);
-        } else {
-          newLikes.add(keyboardId);
+      const response = await axios.post(
+        "https://port-0-edcustom-lxx6l4ha4fc09fa0.sel5.cloudtype.app/checkliked",
+        { memberid: userId },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
         }
-        return newLikes;
-      });
-
-      // 좋아요 수 업데이트
-      setKeyboards((prev) =>
-        prev.map((keyboard) =>
-          keyboard.id === keyboardId
-            ? {
-                ...keyboard,
-                likes: isCurrentlyLiked
-                  ? Math.max(0, keyboard.likes - 1)
-                  : keyboard.likes + 1,
-              }
-            : keyboard
-        )
       );
 
-      // API 요청
-      try {
-        const response = await axios.post(
-          `${API_BASE_URL}/like`,
-          {
-            memberId: user.id,
-            sharedItemId: keyboardId,
-          },
-          {
-            headers: {
-              "Content-Type": "application/json;charset=UTF-8",
-            },
-          }
+      if (
+        response.data &&
+        response.data.status === "OK" &&
+        response.data.data &&
+        Array.isArray(response.data.data)
+      ) {
+        // 좋아요한 키보드들의 ID를 Set으로 변환
+        const likedKeyboardIds = new Set(
+          response.data.data.map((keyboard) => {
+            console.log("좋아요한 키보드:", keyboard);
+            return keyboard.id;
+          })
         );
-
-        // API 응답 확인
-        if (!response.data || response.data.status !== "OK") {
-          console.warn("좋아요 API 응답이 예상과 다릅니다:", response.data);
-          // 여기서는 에러를 던지지 않고 경고만 기록합니다.
-        }
-      } catch (apiError) {
-        console.error("좋아요 API 요청 실패:", apiError);
-        // API 오류가 발생해도 UI를 원래대로 되돌리지 않습니다.
-        // 서버 동기화 문제는 다음 페이지 로드 시 해결됩니다.
+        console.log("좋아요한 키보드 ID 목록:", likedKeyboardIds);
+        setUserLikes(likedKeyboardIds);
+      } else {
+        console.log("예상과 다른 응답 형식:", response.data);
+        setUserLikes(new Set());
       }
     } catch (err) {
-      console.error("좋아요 처리 중 예상치 못한 오류:", err);
+      console.error("=== 좋아요 확인 에러 ===");
+      console.error("에러 메시지:", err.message);
+      console.error("응답 상태:", err.response?.status);
+      console.error("응답 데이터:", err.response?.data);
+
+      // 404 에러인 경우 (사용자가 좋아요한 항목이 없는 경우)
+      if (err.response?.status === 404) {
+        console.log("404 에러 - 좋아요한 항목이 없음");
+        setUserLikes(new Set());
+      } else {
+        // 다른 에러의 경우에도 빈 Set으로 설정하여 기능이 계속 작동하도록 함
+        setUserLikes(new Set());
+      }
+    }
+  };
+
+  // 좋아요 처리 함수
+  const handleLike = async (keyboardId) => {
+    try {
+      if (!userId) {
+        setError("로그인이 필요합니다");
+        return;
+      }
+
+      // 이미 처리 중인 경우 중복 요청 방지
+      if (likingInProgress.has(keyboardId)) {
+        return;
+      }
+
+      // 좋아요 처리 시작
+      setLikingInProgress((prev) => new Set([...prev, keyboardId]));
+
+      const response = await axios.post(
+        "https://port-0-edcustom-lxx6l4ha4fc09fa0.sel5.cloudtype.app/like",
+        {
+          memberid: userId,
+          shareditemid: keyboardId,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.data && response.data.status === "OK") {
+        console.log("좋아요 처리 성공, 키보드 목록 새로고침");
+
+        // 좋아요 처리 후 키보드 목록을 다시 불러와서 업데이트된 좋아요 개수 반영
+        await fetchSharedKeyboards();
+
+        // 사용자 좋아요 상태도 업데이트
+        if (userLikes.has(keyboardId)) {
+          // 좋아요 취소된 경우
+          setUserLikes((prev) => {
+            const newSet = new Set(prev);
+            newSet.delete(keyboardId);
+            return newSet;
+          });
+        } else {
+          // 좋아요 추가된 경우
+          setUserLikes((prev) => new Set([...prev, keyboardId]));
+        }
+      } else {
+        throw new Error(response.data.message || "좋아요 처리에 실패했습니다.");
+      }
+    } catch (err) {
+      console.error("좋아요 처리에 실패했습니다:", err);
+      alert("좋아요 처리에 실패했습니다. 다시 시도해 주세요.");
+    } finally {
+      // 좋아요 처리 완료
+      setLikingInProgress((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(keyboardId);
+        return newSet;
+      });
     }
   };
 
@@ -401,6 +450,12 @@ export const ItemFrame3 = () => {
                 onClick={(e) => {
                   e.stopPropagation(); // 클릭 이벤트 버블링 방지
                   handleLike(keyboard.id);
+                }}
+                style={{
+                  opacity: likingInProgress.has(keyboard.id) ? 0.6 : 1,
+                  cursor: likingInProgress.has(keyboard.id)
+                    ? "wait"
+                    : "pointer",
                 }}
               >
                 <LikeIcon isLiked={userLikes.has(keyboard.id)} />

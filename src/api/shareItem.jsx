@@ -20,7 +20,11 @@ export const shareItem = async (formData) => {
 
     console.log("API 응답:", response.data);
 
-    if (response.data && response.data.status === "OK") {
+    // "OK"와 "CREATED" 모두 성공으로 처리
+    if (
+      response.data &&
+      (response.data.status === "OK" || response.data.status === "CREATED")
+    ) {
       return {
         success: true,
         data: response.data,

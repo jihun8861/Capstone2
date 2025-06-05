@@ -114,6 +114,11 @@ const KeyboardInfo = styled.div`
 const KeyboardName = styled.h3`
   margin: 0 0 5px 0;
   font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 `;
 
 const KeyboardDate = styled.div`
@@ -125,6 +130,7 @@ const KeyboardDetails = styled.div`
   font-size: 12px;
   color: #666;
   margin-top: 5px;
+  line-height: 1.4;
 `;
 
 const LoadingState = styled.div`
@@ -198,6 +204,11 @@ const ShareBadge = styled.div`
     background-color: rgba(76, 175, 80, 0.8);
     pointer-events: none;
   }
+
+  &.shared {
+    background-color: rgba(76, 175, 80, 0.8);
+    cursor: default;
+  }
 `;
 
 const Toast = styled.div`
@@ -255,6 +266,66 @@ const MyCustomKeyboard = () => {
   const { user } = useAuthStore();
   const userEmail = user?.email || "";
 
+  // 키보드 제목을 가져오는 함수 (우선순위: title -> keyboardtype -> 기본값)
+  const getKeyboardTitle = (keyboard) => {
+    if (
+      keyboard.title &&
+      keyboard.title.trim() !== "" &&
+      keyboard.title !== "string"
+    ) {
+      return keyboard.title;
+    }
+    if (keyboard.keyboardtype && keyboard.keyboardtype !== "string") {
+      return keyboard.keyboardtype;
+    }
+    return "커스텀 키보드";
+  };
+
+  // 키보드 비교 함수 - 공유된 키보드와 내 키보드가 같은지 확인
+  const isKeyboardMatching = (myKeyboard, sharedKeyboard) => {
+    // 기본 정보 비교
+    const titleMatch = getKeyboardTitle(myKeyboard) === sharedKeyboard.title;
+    const bareboneMatch =
+      (myKeyboard.barebonecolor || "#FFFFFF") === sharedKeyboard.barebonecolor;
+    const keyboardTypeMatch =
+      (myKeyboard.keyboardtype || "custom") === sharedKeyboard.keyboardtype;
+    const switchMatch =
+      (myKeyboard.switchcolor || "#FFFFFF") === sharedKeyboard.switchcolor;
+
+    // 키캡 색상 비교 (배열 vs 객체)
+    let keycapMatch = true;
+    if (myKeyboard.keycapcolor && Array.isArray(myKeyboard.keycapcolor)) {
+      const myKeycapColors = myKeyboard.keycapcolor;
+      const sharedKeycapColors = sharedKeyboard.keycapcolor?.keyColors || {};
+
+      // 배열 길이가 다르면 다른 키보드
+      const sharedKeycapCount = Object.keys(sharedKeycapColors).length;
+      if (myKeycapColors.length !== sharedKeycapCount) {
+        keycapMatch = false;
+      } else {
+        // 각 키캡 색상 비교
+        for (let i = 0; i < myKeycapColors.length; i++) {
+          const myColor = myKeycapColors[i];
+          const sharedColor =
+            sharedKeycapColors[`keycap_${String.fromCharCode(65 + i)}`] ||
+            sharedKeycapColors[`keycap${i + 1}`];
+          if (myColor !== sharedColor) {
+            keycapMatch = false;
+            break;
+          }
+        }
+      }
+    }
+
+    return (
+      titleMatch &&
+      bareboneMatch &&
+      keyboardTypeMatch &&
+      switchMatch &&
+      keycapMatch
+    );
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       if (!userEmail) {
@@ -266,9 +337,20 @@ const MyCustomKeyboard = () => {
       try {
         setLoading(true);
 
+        // 내 키보드 목록 가져오기
         const myKeyboardsResponse = await axios.post(
           "https://port-0-edcustom-lxx6l4ha4fc09fa0.sel5.cloudtype.app/items/find",
           { email: userEmail },
+          {
+            headers: {
+              "Content-Type": "application/json;charset=UTF-8",
+            },
+          }
+        );
+
+        // 공유된 키보드 목록 가져오기
+        const sharedKeyboardsResponse = await axios.get(
+          "https://port-0-edcustom-lxx6l4ha4fc09fa0.sel5.cloudtype.app/shareditems/find",
           {
             headers: {
               "Content-Type": "application/json;charset=UTF-8",
@@ -282,14 +364,33 @@ const MyCustomKeyboard = () => {
           myKeyboardsResponse.data.status === "OK" &&
           Array.isArray(myKeyboardsResponse.data.data)
         ) {
-          // 각 키보드에 isShared: false 속성 추가
-          const keyboardsWithShareProperty = myKeyboardsResponse.data.data.map(
-            (keyboard) => ({
+          const myKeyboardsData = myKeyboardsResponse.data.data;
+
+          // 공유된 키보드 목록 검증
+          let sharedKeyboardsData = [];
+          if (
+            sharedKeyboardsResponse.data &&
+            sharedKeyboardsResponse.data.status === "OK" &&
+            Array.isArray(sharedKeyboardsResponse.data.data)
+          ) {
+            sharedKeyboardsData = sharedKeyboardsResponse.data.data;
+          }
+
+          // 내 키보드 각각에 대해 이미 공유되었는지 확인
+          const keyboardsWithShareStatus = myKeyboardsData.map((keyboard) => {
+            const isAlreadyShared = sharedKeyboardsData.some(
+              (sharedKeyboard) =>
+                sharedKeyboard.sharedBy === userEmail &&
+                isKeyboardMatching(keyboard, sharedKeyboard)
+            );
+
+            return {
               ...keyboard,
-              isShared: false,
-            })
-          );
-          setMyKeyboards(keyboardsWithShareProperty);
+              isShared: isAlreadyShared,
+            };
+          });
+
+          setMyKeyboards(keyboardsWithShareStatus);
         } else {
           throw new Error("내 키보드 목록 응답 형식이 올바르지 않습니다");
         }
@@ -340,8 +441,7 @@ const MyCustomKeyboard = () => {
     }
 
     // 이미 공유된 키보드인지 확인
-    const isShared = keyboard.isShared;
-    if (isShared) {
+    if (keyboard.isShared) {
       showToast("이미 공유된 키보드입니다.", true);
       return;
     }
@@ -352,21 +452,28 @@ const MyCustomKeyboard = () => {
     try {
       const formData = new FormData();
 
-      const keyboardName = getKeyboardName(
-        keyboard,
-        myKeyboards.indexOf(keyboard)
-      );
+      // 키보드 제목 우선순위: title -> keyboardtype -> 기본값
+      const keyboardTitle = getKeyboardTitle(keyboard);
+
+      // keycapcolor 배열을 객체로 변환
+      let keycapColorObj = {};
+      if (keyboard.keycapcolor && Array.isArray(keyboard.keycapcolor)) {
+        keyboard.keycapcolor.forEach((color, index) => {
+          keycapColorObj[`keycap${index + 1}`] = color;
+        });
+      }
 
       const jsonData = {
         email: userEmail,
-        title: keyboardName,
-        barebonecolor: keyboard.barebonecolor || "string",
-        keyboardtype: keyboard.keyboardtype || "string",
-        keycapcolor: keyboard.keycapcolor || "string",
-        design: keyboard.design || "string",
-        switchcolor: keyboard.switchcolor || "string",
-        imageUrl: keyboard.imageUrl || "string",
+        title: keyboardTitle,
+        barebonecolor: keyboard.barebonecolor || "#FFFFFF",
+        keyboardtype: keyboard.keyboardtype || "custom",
+        keycapcolor: keycapColorObj, // 객체로 변경
+        switchcolor: keyboard.switchcolor || "#FFFFFF",
+        imageUrl: keyboard.imageUrl || null, // 이미지 URL을 JSON에 포함
       };
+
+      console.log("전송할 JSON 데이터:", jsonData); // 디버깅용
 
       formData.append(
         "DTO",
@@ -375,23 +482,7 @@ const MyCustomKeyboard = () => {
         })
       );
 
-      if (keyboard.imageUrl) {
-        try {
-          const imageResponse = await fetch(keyboard.imageUrl);
-          const imageBlob = await imageResponse.blob();
-
-          const fileName = `shared_keyboard_${new Date().getTime()}.png`;
-          const file = new File([imageBlob], fileName, { type: "image/png" });
-
-          formData.append("file", file);
-        } catch (imageError) {
-          console.error("이미지 처리 오류:", imageError);
-          showToast(
-            "이미지 처리 중 오류가 발생했으나, 공유를 계속합니다.",
-            false
-          );
-        }
-      }
+      // 이미지 URL을 JSON에 포함시켰으므로 별도 파일 업로드는 하지 않음
 
       const result = await shareItem(formData);
 
@@ -402,7 +493,7 @@ const MyCustomKeyboard = () => {
           )
         );
 
-        showToast(`${keyboardName}이(가) 성공적으로 공유되었습니다!`, true);
+        showToast(`"${keyboardTitle}"이(가) 성공적으로 공유되었습니다!`, true);
       } else {
         throw new Error(result.message || "공유 중 오류가 발생했습니다.");
       }
@@ -414,10 +505,39 @@ const MyCustomKeyboard = () => {
     }
   };
 
-  const getKeyboardName = (keyboard, index) => {
-    return keyboard.keyboardtype && keyboard.keyboardtype !== "string"
-      ? keyboard.keyboardtype
-      : `커스텀 키보드 ${index + 1}`;
+  // 키보드 상세 정보를 포맷하는 함수
+  const formatKeyboardDetails = (keyboard) => {
+    const details = [];
+
+    if (
+      keyboard.barebonecolor &&
+      keyboard.barebonecolor !== "string" &&
+      keyboard.barebonecolor !== "#FFFFFF"
+    ) {
+      details.push(`바디: ${keyboard.barebonecolor}`);
+    }
+
+    if (
+      keyboard.keycapcolor &&
+      Array.isArray(keyboard.keycapcolor) &&
+      keyboard.keycapcolor.length > 0
+    ) {
+      details.push(`커스텀 키캡: ${keyboard.keycapcolor.length}개`);
+    }
+
+    if (
+      keyboard.switchcolor &&
+      keyboard.switchcolor !== "string" &&
+      keyboard.switchcolor !== "#FFFFFF"
+    ) {
+      details.push(`스위치: ${keyboard.switchcolor}`);
+    }
+
+    if (keyboard.keyboardtype && keyboard.keyboardtype !== "string") {
+      details.push(`타입: ${keyboard.keyboardtype}`);
+    }
+
+    return details.length > 0 ? details.join(" • ") : "커스텀 설정";
   };
 
   if (!userEmail) {
@@ -460,13 +580,16 @@ const MyCustomKeyboard = () => {
   return (
     <Container>
       <Title>나의 커스텀 키보드</Title>
-      <Description>내가 만든 커스텀 키보드 목록입니다.</Description>
+      <Description>
+        내가 만든 커스텀 키보드 목록입니다. 공유 버튼을 클릭하여 다른 사용자와
+        키보드를 공유할 수 있습니다.
+      </Description>
 
       {hasKeyboards ? (
         <VerticalScroll>
           <KeyboardGrid>
             {myKeyboards.map((keyboard, index) => (
-              <KeyboardCard key={keyboard.id}>
+              <KeyboardCard key={keyboard.id || index}>
                 <ShareBadge
                   onClick={(e) => handleShare(keyboard, e)}
                   className={
@@ -493,19 +616,14 @@ const MyCustomKeyboard = () => {
                   )}
                 </KeyboardImage>
                 <KeyboardInfo>
-                  <KeyboardName>
-                    {getKeyboardName(keyboard, index)}
+                  <KeyboardName title={getKeyboardTitle(keyboard)}>
+                    {getKeyboardTitle(keyboard)}
                   </KeyboardName>
                   <KeyboardDate>
                     생성일: {formatDate(keyboard.createdAt)}
                   </KeyboardDate>
                   <KeyboardDetails>
-                    {keyboard.barebonecolor !== "string" &&
-                      `바디: ${keyboard.barebonecolor} • `}
-                    {keyboard.keycapcolor !== "string" &&
-                      `키캡: ${keyboard.keycapcolor} • `}
-                    {keyboard.switchcolor !== "string" &&
-                      `스위치: ${keyboard.switchcolor}`}
+                    {formatKeyboardDetails(keyboard)}
                   </KeyboardDetails>
                 </KeyboardInfo>
               </KeyboardCard>
