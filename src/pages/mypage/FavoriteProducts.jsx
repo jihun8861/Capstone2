@@ -114,6 +114,11 @@ const KeyboardDate = styled.div`
   font-size: 12px;
   color: #888;
 `;
+const KeyboardCreater = styled.div`
+  font-size: 12px;
+  color: #888;
+  margin-top: 5px;
+`;
 
 const EmptyState = styled.div`
   display: flex;
@@ -344,12 +349,11 @@ const FavoriteProducts = () => {
                   )}
                 </KeyboardImage>
                 <KeyboardInfo>
-                  <KeyboardName>
-                    {keyboard.keyboardtype || `키보드 #${keyboard.id}`}
-                  </KeyboardName>
+                  <KeyboardName>{keyboard.title}</KeyboardName>
                   <KeyboardDate>
                     생성일: {formatDate(keyboard.createdAt)}
                   </KeyboardDate>
+                  <KeyboardCreater>제작자: {keyboard.email}</KeyboardCreater>
                 </KeyboardInfo>
               </KeyboardCard>
             ))}

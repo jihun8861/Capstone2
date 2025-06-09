@@ -266,7 +266,6 @@ const MyCustomKeyboard = () => {
   const { user } = useAuthStore();
   const userEmail = user?.email || "";
 
-  // 키보드 제목을 가져오는 함수 (우선순위: title -> keyboardtype -> 기본값)
   const getKeyboardTitle = (keyboard) => {
     if (
       keyboard.title &&
@@ -281,9 +280,7 @@ const MyCustomKeyboard = () => {
     return "커스텀 키보드";
   };
 
-  // 키보드 비교 함수 - 공유된 키보드와 내 키보드가 같은지 확인
   const isKeyboardMatching = (myKeyboard, sharedKeyboard) => {
-    // 기본 정보 비교
     const titleMatch = getKeyboardTitle(myKeyboard) === sharedKeyboard.title;
     const bareboneMatch =
       (myKeyboard.barebonecolor || "#FFFFFF") === sharedKeyboard.barebonecolor;
@@ -292,24 +289,29 @@ const MyCustomKeyboard = () => {
     const switchMatch =
       (myKeyboard.switchcolor || "#FFFFFF") === sharedKeyboard.switchcolor;
 
-    // 키캡 색상 비교 (배열 vs 객체)
     let keycapMatch = true;
     if (myKeyboard.keycapcolor && Array.isArray(myKeyboard.keycapcolor)) {
       const myKeycapColors = myKeyboard.keycapcolor;
-      const sharedKeycapColors = sharedKeyboard.keycapcolor?.keyColors || {};
+      const sharedKeycapColors =
+        sharedKeyboard.keycapcolor?.keyColors ||
+        sharedKeyboard.keycapcolor ||
+        {};
 
-      // 배열 길이가 다르면 다른 키보드
-      const sharedKeycapCount = Object.keys(sharedKeycapColors).length;
-      if (myKeycapColors.length !== sharedKeycapCount) {
+      const myCustomKeycaps = {};
+      myKeycapColors.forEach((color, index) => {
+        if (color && color !== "#FFFFFF" && color.toUpperCase() !== "#FFFFFF") {
+          myCustomKeycaps[`keycap${index + 1}`] = color;
+        }
+      });
+
+      const myCustomCount = Object.keys(myCustomKeycaps).length;
+      const sharedCustomCount = Object.keys(sharedKeycapColors).length;
+
+      if (myCustomCount !== sharedCustomCount) {
         keycapMatch = false;
       } else {
-        // 각 키캡 색상 비교
-        for (let i = 0; i < myKeycapColors.length; i++) {
-          const myColor = myKeycapColors[i];
-          const sharedColor =
-            sharedKeycapColors[`keycap_${String.fromCharCode(65 + i)}`] ||
-            sharedKeycapColors[`keycap${i + 1}`];
-          if (myColor !== sharedColor) {
+        for (const [key, color] of Object.entries(myCustomKeycaps)) {
+          if (sharedKeycapColors[key] !== color) {
             keycapMatch = false;
             break;
           }
@@ -337,7 +339,6 @@ const MyCustomKeyboard = () => {
       try {
         setLoading(true);
 
-        // 내 키보드 목록 가져오기
         const myKeyboardsResponse = await axios.post(
           "https://port-0-edcustom-lxx6l4ha4fc09fa0.sel5.cloudtype.app/items/find",
           { email: userEmail },
@@ -348,7 +349,6 @@ const MyCustomKeyboard = () => {
           }
         );
 
-        // 공유된 키보드 목록 가져오기
         const sharedKeyboardsResponse = await axios.get(
           "https://port-0-edcustom-lxx6l4ha4fc09fa0.sel5.cloudtype.app/shareditems/find",
           {
@@ -358,7 +358,6 @@ const MyCustomKeyboard = () => {
           }
         );
 
-        // 내 키보드 목록 검증 및 저장
         if (
           myKeyboardsResponse.data &&
           myKeyboardsResponse.data.status === "OK" &&
@@ -366,7 +365,6 @@ const MyCustomKeyboard = () => {
         ) {
           const myKeyboardsData = myKeyboardsResponse.data.data;
 
-          // 공유된 키보드 목록 검증
           let sharedKeyboardsData = [];
           if (
             sharedKeyboardsResponse.data &&
@@ -376,7 +374,6 @@ const MyCustomKeyboard = () => {
             sharedKeyboardsData = sharedKeyboardsResponse.data.data;
           }
 
-          // 내 키보드 각각에 대해 이미 공유되었는지 확인
           const keyboardsWithShareStatus = myKeyboardsData.map((keyboard) => {
             const isAlreadyShared = sharedKeyboardsData.some(
               (sharedKeyboard) =>
@@ -440,7 +437,6 @@ const MyCustomKeyboard = () => {
       return;
     }
 
-    // 이미 공유된 키보드인지 확인
     if (keyboard.isShared) {
       showToast("이미 공유된 키보드입니다.", true);
       return;
@@ -452,28 +448,109 @@ const MyCustomKeyboard = () => {
     try {
       const formData = new FormData();
 
-      // 키보드 제목 우선순위: title -> keyboardtype -> 기본값
       const keyboardTitle = getKeyboardTitle(keyboard);
 
-      // keycapcolor 배열을 객체로 변환
+      console.log("=== 키캡 색상 처리 시작 ===");
+      console.log("원본 keyboard.keycapcolor:", keyboard.keycapcolor);
+      console.log("keycapcolor 타입:", typeof keyboard.keycapcolor);
+      console.log(
+        "keycapcolor가 배열인가?",
+        Array.isArray(keyboard.keycapcolor)
+      );
+
       let keycapColorObj = {};
-      if (keyboard.keycapcolor && Array.isArray(keyboard.keycapcolor)) {
-        keyboard.keycapcolor.forEach((color, index) => {
-          keycapColorObj[`keycap${index + 1}`] = color;
-        });
+
+      if (keyboard.keycapcolor) {
+        if (
+          typeof keyboard.keycapcolor === "object" &&
+          !Array.isArray(keyboard.keycapcolor)
+        ) {
+          console.log("객체 형태로 처리합니다");
+
+          let keycapData = keyboard.keycapcolor;
+          if (keyboard.keycapcolor.keyColors) {
+            console.log("keyColors 중첩 구조 발견, keyColors 사용");
+            keycapData = keyboard.keycapcolor.keyColors;
+          }
+
+          console.log("처리할 keycapData:", keycapData);
+
+          Object.entries(keycapData).forEach(([key, color]) => {
+            console.log(`원본 키: "${key}", 원본 색상: "${color}"`);
+
+            if (color && typeof color === "string" && color.trim() !== "") {
+              const trimmedColor = color.trim();
+              console.log(`트림된 색상: "${trimmedColor}"`);
+
+              if (trimmedColor !== "string") {
+                keycapColorObj[key] = trimmedColor;
+                console.log(`저장된 키캡: "${key}" = "${trimmedColor}"`);
+              } else {
+                console.log(`유효하지 않은 색상 제외: "${color}"`);
+              }
+            } else {
+              console.log(`빈 색상 제외: ${color} (타입: ${typeof color})`);
+            }
+          });
+        } else if (Array.isArray(keyboard.keycapcolor)) {
+          console.log("배열 형태로 처리합니다");
+
+          keyboard.keycapcolor.forEach((color, index) => {
+            console.log(`인덱스 ${index}: "${color}"`);
+
+            if (color && typeof color === "string" && color.trim() !== "") {
+              const trimmedColor = color.trim();
+              if (trimmedColor !== "string") {
+                keycapColorObj[`keycap${index + 1}`] = trimmedColor;
+                console.log(
+                  `저장된 키캡: keycap${index + 1} = "${trimmedColor}"`
+                );
+              }
+            }
+          });
+        } else if (typeof keyboard.keycapcolor === "string") {
+          try {
+            const parsedKeycapColor = JSON.parse(keyboard.keycapcolor);
+            console.log("JSON 문자열을 파싱했습니다:", parsedKeycapColor);
+
+            if (typeof parsedKeycapColor === "object") {
+              Object.entries(parsedKeycapColor).forEach(([key, color]) => {
+                if (color && typeof color === "string" && color.trim() !== "") {
+                  const trimmedColor = color.trim();
+                  if (trimmedColor !== "string") {
+                    keycapColorObj[key] = trimmedColor;
+                    console.log(
+                      `JSON에서 저장된 키캡: "${key}" = "${trimmedColor}"`
+                    );
+                  }
+                }
+              });
+            }
+          } catch (parseError) {
+            console.log("JSON 파싱 실패, 문자열 그대로 사용");
+          }
+        }
       }
+
+      console.log("최종 keycapColorObj:", keycapColorObj);
+      console.log("변환된 키캡 개수:", Object.keys(keycapColorObj).length);
+      console.log("=== 키캡 색상 처리 완료 ===");
 
       const jsonData = {
         email: userEmail,
         title: keyboardTitle,
         barebonecolor: keyboard.barebonecolor || "#FFFFFF",
         keyboardtype: keyboard.keyboardtype || "custom",
-        keycapcolor: keycapColorObj, // 객체로 변경
+        keycapcolor: keycapColorObj,
         switchcolor: keyboard.switchcolor || "#FFFFFF",
-        imageUrl: keyboard.imageUrl || null, // 이미지 URL을 JSON에 포함
+        imageUrl: keyboard.imageUrl || null,
       };
 
-      console.log("전송할 JSON 데이터:", jsonData); // 디버깅용
+      console.log("전송할 JSON 데이터:", jsonData);
+      console.log(
+        "keycapcolor 상세:",
+        JSON.stringify(jsonData.keycapcolor, null, 2)
+      );
 
       formData.append(
         "DTO",
@@ -481,8 +558,6 @@ const MyCustomKeyboard = () => {
           type: "application/json",
         })
       );
-
-      // 이미지 URL을 JSON에 포함시켰으므로 별도 파일 업로드는 하지 않음
 
       const result = await shareItem(formData);
 
@@ -505,7 +580,6 @@ const MyCustomKeyboard = () => {
     }
   };
 
-  // 키보드 상세 정보를 포맷하는 함수
   const formatKeyboardDetails = (keyboard) => {
     const details = [];
 
@@ -522,7 +596,14 @@ const MyCustomKeyboard = () => {
       Array.isArray(keyboard.keycapcolor) &&
       keyboard.keycapcolor.length > 0
     ) {
-      details.push(`커스텀 키캡: ${keyboard.keycapcolor.length}개`);
+      const customKeycapCount = keyboard.keycapcolor.filter(
+        (color) =>
+          color && color !== "#FFFFFF" && color.toUpperCase() !== "#FFFFFF"
+      ).length;
+
+      if (customKeycapCount > 0) {
+        details.push(`커스텀 키캡: ${customKeycapCount}개`);
+      }
     }
 
     if (
@@ -623,7 +704,7 @@ const MyCustomKeyboard = () => {
                     생성일: {formatDate(keyboard.createdAt)}
                   </KeyboardDate>
                   <KeyboardDetails>
-                    {formatKeyboardDetails(keyboard)}
+                    {formatKeyboardDetails(keyboard.email)}
                   </KeyboardDetails>
                 </KeyboardInfo>
               </KeyboardCard>
