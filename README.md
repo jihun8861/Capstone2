@@ -1,1 +1,1 @@
-# React + Vite + HUN
+# React + Vite
