@@ -25,7 +25,7 @@ export const KeyboardPart = ({
   const isKeycap = partType === "keycap";
   
   // LED 색상 설정
-  const ledColor = new THREE.Color("#FFFFFF"); // 빨간색 LED
+  const ledColor = new THREE.Color("#FFFFFF");
   const ledIntensity = 10;
 
   // LED 효과용 재질 참조 저장

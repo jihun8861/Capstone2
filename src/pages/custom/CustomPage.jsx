@@ -1,7 +1,7 @@
 import styled from "styled-components";
 import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
-import { FiRefreshCw, FiShare2, FiSave } from "react-icons/fi";
+import { FiRefreshCw, FiThumbsUp, FiSave } from "react-icons/fi";
 import { ThreeDModel } from "../../components/model/ThreeDModel";
 import { ColorSelect } from "../../color/ColorSelect";
 import { KeycapArray } from "./KeycapArray";
@@ -540,7 +540,7 @@ const handleRecommendation = async () => {
           }, 300); // 짧은 딜레이로 적용
         }
 
-        alert(result.message || "AI가 새로운 색상을 추천했습니다!");
+        alert("AI가 새로운 색상을 추천했습니다!");
       }
     } else {
       alert("추천 색상을 가져오는 데 실패했습니다.");
@@ -785,7 +785,7 @@ const Test = styled.div`
             다시 시작하기
           </IconButton>
           <IconButton onClick={handleRecommendation} disabled={isLoading}>
-            <FiShare2 />
+            <FiThumbsUp />
             {isLoading ? '추천 중...' : '추천받기'}
           </IconButton>
           <SaveButton onClick={handleSaveClick}>

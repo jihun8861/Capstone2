@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import styled from "styled-components";
 import { useAuthStore } from "../../api/useAuthStore";
+import { useNavigate } from 'react-router-dom';
 import axios from "axios";
 import { shareItem } from "../../api/shareItem";
 import { FiShare2 } from "react-icons/fi";
@@ -95,7 +96,7 @@ const KeyboardImage = styled.div`
   background-image: ${(props) =>
     props.image ? `url(${props.image})` : "none"};
   background-size: cover;
-  background-position: center;
+  background-position: 60% center; /* center에서 left center로 변경 */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -255,6 +256,7 @@ const formatDate = (dateString) => {
 const MyCustomKeyboard = () => {
   const [myKeyboards, setMyKeyboards] = useState([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
   const [error, setError] = useState(null);
   const [toast, setToast] = useState({
     show: false,
@@ -526,7 +528,7 @@ const MyCustomKeyboard = () => {
                 }
               });
             }
-          } catch (parseError) {
+          } catch (error) {
             console.log("JSON 파싱 실패, 문자열 그대로 사용");
           }
         }
