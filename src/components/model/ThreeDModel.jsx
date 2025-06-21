@@ -80,10 +80,11 @@ const Model = ({
   size,
   selectedModel,
   baseColor,
-  switchColor,
+  switchColor = {},
   resetStatus,
   keycapColors = {},
   ledEnabled = false,
+  viewerMode = false, // 뷰어 모드 prop 추가
 }) => {
   const [baseAnimationProgress, setBaseAnimationProgress] = useState(0);
   const [switchAnimationProgress, setSwitchAnimationProgress] = useState(0);
@@ -105,6 +106,104 @@ const Model = ({
   const switchAnimationExecuted = useRef({});
   const keycapAnimationExecuted = useRef({});
   const engravingAnimationExecuted = useRef({});
+
+  // 뷰어 모드에서는 모든 파트를 즉시 표시하도록 수정
+  useEffect(() => {
+    if (viewerMode) {
+      // 뷰어 모드에서는 모든 파트를 즉시 표시
+      setShowSwitch(true);
+      setShowKeycap(true);
+      setShowEngraving(true);
+      
+      // 애니메이션 진행률을 즉시 완료로 설정
+      setSwitchAnimationProgress(1);
+      setKeycapAnimationProgress(1);
+      setEngravingAnimationProgress(1);
+      
+      // 애니메이션 실행 상태도 완료로 설정
+      switchAnimationExecuted.current[size] = true;
+      keycapAnimationExecuted.current[size] = true;
+      engravingAnimationExecuted.current[size] = true;
+    }
+  }, [viewerMode, size]);
+
+  // 기존 selectedModel 처리 로직은 뷰어 모드가 아닐 때만 실행
+  useEffect(() => {
+    if (viewerMode) return; // 뷰어 모드에서는 이 로직을 건너뜀
+    
+    if (selectedModel === "switch" && !showSwitch) {
+      setShowSwitch(true);
+      if (switchAnimationExecuted.current[size]) {
+        setSwitchAnimationProgress(1);
+        return;
+      }
+
+      setTimeout(() => {
+        const duration = 1500;
+        const startTime = Date.now();
+
+        const updateAnimation = () => {
+          const elapsed = Date.now() - startTime;
+          const progress = Math.min(elapsed / duration, 1);
+          setSwitchAnimationProgress(progress);
+          if (progress < 1) {
+            requestAnimationFrame(updateAnimation);
+          } else {
+            switchAnimationExecuted.current[size] = true;
+          }
+        };
+
+        requestAnimationFrame(updateAnimation);
+      }, 100);
+    } else if (selectedModel === "keycap" && !showKeycap) {
+      setShowKeycap(true);
+      setShowEngraving(true);
+
+      if (keycapAnimationExecuted.current[size]) {
+        setKeycapAnimationProgress(1);
+      } else {
+        setTimeout(() => {
+          const duration = 1500;
+          const startTime = Date.now();
+
+          const updateAnimation = () => {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            setKeycapAnimationProgress(progress);
+            if (progress < 1) {
+              requestAnimationFrame(updateAnimation);
+            } else {
+              keycapAnimationExecuted.current[size] = true;
+            }
+          };
+
+          requestAnimationFrame(updateAnimation);
+        }, 100);
+      }
+
+      if (engravingAnimationExecuted.current[size]) {
+        setEngravingAnimationProgress(1);
+      } else {
+        setTimeout(() => {
+          const duration = 1500;
+          const startTime = Date.now();
+
+          const updateAnimation = () => {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            setEngravingAnimationProgress(progress);
+            if (progress < 1) {
+              requestAnimationFrame(updateAnimation);
+            } else {
+              engravingAnimationExecuted.current[size] = true;
+            }
+          };
+
+          requestAnimationFrame(updateAnimation);
+        }, 100);
+      }
+    }
+  }, [selectedModel, size, showSwitch, showKeycap, showEngraving, viewerMode]);
 
   // LED 효과 적용
   useEffect(() => {
@@ -371,7 +470,7 @@ const Model = ({
 };
 
 export const ThreeDModel = forwardRef(
-  ({ size, selectedModel, baseColor, switchColor = {}, keycapColors = {} }, ref) => {
+  ({ size, selectedModel, baseColor, switchColor = {}, keycapColors = {}, viewerMode = false }, ref) => {
     const { size: urlSize } = useParams();
     const location = useLocation();
     const keyboardSize = size || urlSize || "100";
@@ -553,6 +652,7 @@ export const ThreeDModel = forwardRef(
               resetStatus={resetStatus}
               keycapColors={internalKeycapColors}
               ledEnabled={ledEnabled}
+              viewerMode={viewerMode}
             />
 
             {/* LED가 활성화된 경우 bloom 효과 추가 */}

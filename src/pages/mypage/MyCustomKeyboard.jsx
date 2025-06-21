@@ -376,18 +376,20 @@ const MyCustomKeyboard = () => {
             sharedKeyboardsData = sharedKeyboardsResponse.data.data;
           }
 
-          const keyboardsWithShareStatus = myKeyboardsData.map((keyboard) => {
-            const isAlreadyShared = sharedKeyboardsData.some(
-              (sharedKeyboard) =>
-                sharedKeyboard.sharedBy === userEmail &&
-                isKeyboardMatching(keyboard, sharedKeyboard)
-            );
+          // 공유 여부 추가한 후 최신순 정렬
+const keyboardsWithShareStatus = myKeyboardsData.map((keyboard) => {
+  const isAlreadyShared = sharedKeyboardsData.some(
+    (sharedKeyboard) =>
+      sharedKeyboard.sharedBy === userEmail &&
+      isKeyboardMatching(keyboard, sharedKeyboard)
+  );
 
-            return {
-              ...keyboard,
-              isShared: isAlreadyShared,
-            };
-          });
+  return {
+    ...keyboard,
+    isShared: isAlreadyShared,
+  };
+}).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)); // 최신순 정렬
+
 
           setMyKeyboards(keyboardsWithShareStatus);
         } else {
@@ -635,6 +637,23 @@ const MyCustomKeyboard = () => {
     );
   }
 
+  const handleKeyboardClick = (keyboard) => {
+    // 키보드 데이터를 URL 파라미터로 전달하여 CustomPage로 이동
+    const keyboardData = {
+      id: keyboard.id,
+      title: getKeyboardTitle(keyboard),
+      barebonecolor: keyboard.barebonecolor || "#FFFFFF",
+      keyboardtype: keyboard.keyboardtype || "custom",
+      keycapcolor: keyboard.keycapcolor || {},
+      switchcolor: keyboard.switchcolor || "#FFFFFF",
+      imageUrl: keyboard.imageUrl
+    };
+    
+    // Base64로 인코딩하여 URL에 전달
+    const encodedData = btoa(JSON.stringify(keyboardData));
+    navigate(`/customPage/${keyboard.keyboardtype || "60"}?view=${encodedData}`);
+  };
+
   if (loading) {
     return (
       <Container>
@@ -660,19 +679,22 @@ const MyCustomKeyboard = () => {
 
   const hasKeyboards = myKeyboards.length > 0;
 
-  return (
+ return (
     <Container>
       <Title>나의 커스텀 키보드</Title>
       <Description>
-        내가 만든 커스텀 키보드 목록입니다. 공유 버튼을 클릭하여 다른 사용자와
-        키보드를 공유할 수 있습니다.
+        내가 만든 커스텀 키보드 목록입니다. 키보드를 클릭하면 상세 보기로 이동합니다.
       </Description>
 
       {hasKeyboards ? (
         <VerticalScroll>
           <KeyboardGrid>
             {myKeyboards.map((keyboard, index) => (
-              <KeyboardCard key={keyboard.id || index}>
+              <KeyboardCard 
+                key={keyboard.id || index}
+                onClick={() => handleKeyboardClick(keyboard)} // 클릭 이벤트 추가
+                style={{ cursor: 'pointer' }} // 커서 스타일 추가
+              >
                 <ShareBadge
                   onClick={(e) => handleShare(keyboard, e)}
                   className={
@@ -706,7 +728,7 @@ const MyCustomKeyboard = () => {
                     생성일: {formatDate(keyboard.createdAt)}
                   </KeyboardDate>
                   <KeyboardDetails>
-                    {formatKeyboardDetails(keyboard.email)}
+                    {formatKeyboardDetails(keyboard)}
                   </KeyboardDetails>
                 </KeyboardInfo>
               </KeyboardCard>

@@ -75,6 +75,8 @@ export const KeyboardPart = ({
         }
       }
     });
+
+    
   
     // 중심점 계산
     const box = new THREE.Box3().setFromObject(scene);
@@ -84,6 +86,20 @@ export const KeyboardPart = ({
     // 중심점을 원점으로 맞추기
     scene.position.sub(center);
   }, [scene, color, isTopCase, isTopSwitch, isPCB, isKeycap, meshRef]);
+
+  // color가 바뀔 때마다 메시 색상을 동적으로 업데이트
+useEffect(() => {
+  if (scene && color && (isTopCase || isTopSwitch || isKeycap)) {
+    scene.traverse((child) => {
+      if (child.isMesh && child.material) {
+        // 기존 material을 복제하고 색상 변경
+        child.material = child.material.clone();
+        child.material.color.set(color);
+      }
+    });
+  }
+}, [color, scene, isTopCase, isTopSwitch, isKeycap]);
+
 
   // LED 상태가 변경될 때마다 재질 업데이트
   useEffect(() => {
