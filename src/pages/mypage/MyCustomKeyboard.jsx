@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import styled from "styled-components";
 import { useAuthStore } from "../../api/useAuthStore";
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { shareItem } from "../../api/shareItem";
 import { FiShare2 } from "react-icons/fi";
@@ -377,19 +377,20 @@ const MyCustomKeyboard = () => {
           }
 
           // 공유 여부 추가한 후 최신순 정렬
-const keyboardsWithShareStatus = myKeyboardsData.map((keyboard) => {
-  const isAlreadyShared = sharedKeyboardsData.some(
-    (sharedKeyboard) =>
-      sharedKeyboard.sharedBy === userEmail &&
-      isKeyboardMatching(keyboard, sharedKeyboard)
-  );
+          const keyboardsWithShareStatus = myKeyboardsData
+            .map((keyboard) => {
+              const isAlreadyShared = sharedKeyboardsData.some(
+                (sharedKeyboard) =>
+                  sharedKeyboard.sharedBy === userEmail &&
+                  isKeyboardMatching(keyboard, sharedKeyboard)
+              );
 
-  return {
-    ...keyboard,
-    isShared: isAlreadyShared,
-  };
-}).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)); // 최신순 정렬
-
+              return {
+                ...keyboard,
+                isShared: isAlreadyShared,
+              };
+            })
+            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)); // 최신순 정렬
 
           setMyKeyboards(keyboardsWithShareStatus);
         } else {
@@ -646,12 +647,14 @@ const keyboardsWithShareStatus = myKeyboardsData.map((keyboard) => {
       keyboardtype: keyboard.keyboardtype || "custom",
       keycapcolor: keyboard.keycapcolor || {},
       switchcolor: keyboard.switchcolor || "#FFFFFF",
-      imageUrl: keyboard.imageUrl
+      imageUrl: keyboard.imageUrl,
     };
-    
+
     // Base64로 인코딩하여 URL에 전달
     const encodedData = btoa(JSON.stringify(keyboardData));
-    navigate(`/customPage/${keyboard.keyboardtype || "60"}?view=${encodedData}`);
+    navigate(
+  `/viewer/${keyboard.keyboardtype || "60"}?view=${encodedData}`
+);
   };
 
   if (loading) {
@@ -679,21 +682,22 @@ const keyboardsWithShareStatus = myKeyboardsData.map((keyboard) => {
 
   const hasKeyboards = myKeyboards.length > 0;
 
- return (
+  return (
     <Container>
       <Title>나의 커스텀 키보드</Title>
       <Description>
-        내가 만든 커스텀 키보드 목록입니다. 키보드를 클릭하면 상세 보기로 이동합니다.
+        내가 만든 커스텀 키보드 목록입니다. 키보드를 클릭하면 상세 보기로
+        이동합니다.
       </Description>
 
       {hasKeyboards ? (
         <VerticalScroll>
           <KeyboardGrid>
             {myKeyboards.map((keyboard, index) => (
-              <KeyboardCard 
+              <KeyboardCard
                 key={keyboard.id || index}
                 onClick={() => handleKeyboardClick(keyboard)} // 클릭 이벤트 추가
-                style={{ cursor: 'pointer' }} // 커서 스타일 추가
+                style={{ cursor: "pointer" }} // 커서 스타일 추가
               >
                 <ShareBadge
                   onClick={(e) => handleShare(keyboard, e)}

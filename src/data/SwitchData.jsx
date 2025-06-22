@@ -1,4 +1,4 @@
-export const switchData = [
+export const SwitchData = [
   {
     name: "청축",
     color: "#0000FF",

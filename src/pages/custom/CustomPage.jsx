@@ -7,6 +7,7 @@ import { ColorSelect } from "../../color/ColorSelect";
 import { KeycapArray } from "./KeycapArray";
 import { useAuthStore } from "../../api/useAuthStore";
 import { saveItem } from "../../api/saveItem";
+import { SwitchData } from "../../data/SwitchData";
 import { KeyboardModal } from "../../components/modal/KeyboardModal";
 import { fetchKeyboardRecommendation } from "../../api/recommendation";
 import { KEYCAP_IDS } from "../../data/KeycapID";
@@ -72,7 +73,7 @@ const SelectContainer = styled.div`
 
 const ThreeDContainer = styled.div`
   display: flex;
-  width: ${props => props.showDescription ? '68%' : '85%'};
+  width: ${(props) => (props.showDescription ? "68%" : "85%")};
   height: 100%;
   position: relative;
   overflow: hidden;
@@ -82,30 +83,30 @@ const ThreeDContainer = styled.div`
 `;
 
 const DescriptionContainer = styled.div`
-  display: ${props => props.show ? 'flex' : 'none'};
-  width: ${props => props.show ? '17%' : '0'};
+  display: ${(props) => (props.show ? "flex" : "none")};
+  width: ${(props) => (props.show ? "17%" : "0")};
   height: 100%;
-  padding: ${props => props.show ? '20px' : '0'};
+  padding: ${(props) => (props.show ? "20px" : "0")};
   background-color: white;
-  border-left: ${props => props.show ? 'solid 1px #ddd' : 'none'};
+  border-left: ${(props) => (props.show ? "solid 1px #ddd" : "none")};
   transition: all 0.3s ease;
   overflow-y: auto;
   flex-direction: column;
-  
+
   h3 {
     font-size: 18px;
     font-weight: bold;
     margin-bottom: 15px;
     color: #333;
   }
-  
+
   h4 {
     font-size: 16px;
     font-weight: bold;
     margin: 15px 0 10px 0;
     color: #444;
   }
-  
+
   p {
     font-size: 14px;
     line-height: 1.5;
@@ -121,7 +122,7 @@ const CustomFrame = styled.div`
   display: flex;
   justify-content: center;
   align-items: center;
-  background-color: ${props => props.isDarkMode ? '#121212' : '#e9ecef'};
+  background-color: ${(props) => (props.isDarkMode ? "#121212" : "#e9ecef")};
   transition: background-color 0.5s ease;
 `;
 
@@ -222,6 +223,7 @@ const ColorLabel = styled.span`
   font-size: 14px;
   color: #666;
   margin-right: 8px;
+  width: 80px;
 `;
 
 const ColorInput = styled.input`
@@ -242,20 +244,20 @@ const LedButtonContainer = styled.div`
 
 const LedButton = styled.button`
   padding: 12px 20px;
-  background-color: ${props => props.active ? '#00ffff' : '#333'};
-  color: ${props => props.active ? '#000' : '#fff'};
+  background-color: ${(props) => (props.active ? "#00ffff" : "#333")};
+  color: ${(props) => (props.active ? "#000" : "#fff")};
   border: none;
   border-radius: 5px;
   font-weight: bold;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: ${props => props.active ? '0 0 15px #00ffff' : 'none'};
+  box-shadow: ${(props) => (props.active ? "0 0 15px #00ffff" : "none")};
   display: flex;
   align-items: center;
   justify-content: center;
-  
+
   &:hover {
-    background-color: ${props => props.active ? '#66ffff' : '#444'};
+    background-color: ${(props) => (props.active ? "#66ffff" : "#444")};
   }
 `;
 
@@ -264,8 +266,8 @@ const LedIcon = styled.div`
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background-color: ${props => props.active ? '#00ffff' : '#666'};
-  box-shadow: ${props => props.active ? '0 0 10px #00ffff' : 'none'};
+  background-color: ${(props) => (props.active ? "#00ffff" : "#666")};
+  box-shadow: ${(props) => (props.active ? "0 0 10px #00ffff" : "none")};
   margin-right: 8px;
 `;
 
@@ -290,7 +292,7 @@ const SwitchColorBox = styled.div`
   border-radius: 4px;
   margin-right: 10px;
   border: 1px solid #ddd;
-  background-color: ${props => props.color};
+  background-color: ${(props) => props.color};
 `;
 
 const SwitchName = styled.h4`
@@ -320,7 +322,7 @@ export const CustomPage = () => {
   const [restartModalOpen, setRestartModalOpen] = useState(false);
   const [saveModalOpen, setSaveModalOpen] = useState(false);
   const [modelImage, setModelImage] = useState("");
-  
+
   // 제목 상태 추가
   const [designTitle, setDesignTitle] = useState("");
 
@@ -328,53 +330,29 @@ export const CustomPage = () => {
   const [baseColor, setBaseColor] = useState("#ffffff");
   const [switchColor, setSwitchColor] = useState("#ffffff");
   const [showColorPicker, setShowColorPicker] = useState(false);
-  
+
   // 키캡 배열 컴포넌트 표시 상태
   const [showKeycapArray, setShowKeycapArray] = useState(false);
-  
+
   // 키캡 색상 상태 관리 - 키 ID를 색상에 매핑
   const [keycapColors, setKeycapColors] = useState({});
 
   // LED 상태 관리
   const [ledEnabled, setLedEnabled] = useState(false);
-  
+
   // AI 추천 로딩 상태 추가
   const [isLoading, setIsLoading] = useState(false);
-  
+
   // AI 추천 결과 및 설명 상태 추가
   const [recommendationResult, setRecommendationResult] = useState(null);
-  
+
   // 추천 설명 표시 상태 추가
   const [showDescription, setShowDescription] = useState(false);
 
-  // 스위치 정보 데이터
-  const switchData = [
-    {
-      name: "청축",
-      color: "#0000FF",
-      description: "클릭감이 강하고 소리가 큰 스위치입니다. 타이핑할 때 '딸깍' 소리가 나며, 게이밍보다는 타이핑 작업에 적합합니다."
-    },
-    {
-      name: "적축",
-      color: "#FF0000", 
-      description: "선형 스위치로 부드럽고 조용합니다. 키를 누르는 저항감이 일정하여 게이밍에 많이 사용됩니다."
-    },
-    {
-      name: "갈축",
-      color: "#8B4513",
-      description: "촉각 피드백이 있지만 청축보다 조용합니다. 타이핑과 게이밍 모두에 적합한 만능 스위치입니다."
-    },
-    {
-      name: "흑축",
-      color: "#000000",
-      description: "적축보다 더 무거운 선형 스위치입니다. 오타를 줄이고 싶거나 더 묵직한 타이핑감을 원하는 사용자에게 적합합니다."
-    }
-  ];
-
   // LED 토글 핸들러 추가
   const handleLedToggle = () => {
-    setLedEnabled(prev => !prev);
-    
+    setLedEnabled((prev) => !prev);
+
     // ThreeDModel의 LED 상태 토글
     if (modelRef.current && modelRef.current.toggleLed) {
       modelRef.current.toggleLed();
@@ -407,17 +385,13 @@ export const CustomPage = () => {
     }
   };
 
-  // 스위치 색상 선택 핸들러
   const handleSwitchColorSelect = (color) => {
     setSwitchColor(color);
   };
-  
-  // 키캡 색상 변경 핸들러
+
   const handleKeycapColorChange = (keycapId, color, allColors) => {
-    // 전체 키캡 색상 상태 업데이트
     setKeycapColors(allColors || { ...keycapColors, [keycapId]: color });
-    
-    // 3D 모델에 키캡 색상 변경 적용 (필요한 경우)
+
     if (modelRef.current && modelRef.current.updateKeycapColor) {
       modelRef.current.updateKeycapColor(keycapId, color);
     }
@@ -432,126 +406,109 @@ export const CustomPage = () => {
     setRestartModalOpen(true);
   };
 
-  // 다시 시작하기 확인 처리 - 완전히 초기화하고 모델 리렌더링
   const handleConfirmRestart = () => {
     setRestartModalOpen(false);
-    
-    // 페이지 새로고침 실행
     window.location.reload();
   };
 
- // 축 이름을 색상으로 매핑하는 함수
   const getSwitchColorFromName = (switchName) => {
     const switchColorMap = {
-      "청축": "#0066cc",
-      "적축": "#cc0000", 
-      "갈축": "#8b4513",
-      "흑축": "#000000",
-      "백축": "#ffffff"
+      청축: "#0066cc",
+      적축: "#cc0000",
+      갈축: "#8b4513",
+      흑축: "#000000",
+      백축: "#ffffff",
     };
-    
-    // switchName이 축 이름인지 확인하고 해당 색상 반환
+
     for (const [axisName, color] of Object.entries(switchColorMap)) {
       if (switchName && switchName.includes(axisName)) {
         return color;
       }
     }
-    
-    // 축 이름이 아니면 원래 값 반환 (색상 코드인 경우)
+
     return switchName;
   };
 
-const handleRecommendation = async () => {
-  try {
-    setIsLoading(true);
+  const handleRecommendation = async () => {
+    try {
+      setIsLoading(true);
 
-    // **1. 세션 스토리지 초기화 (키캡 색상 저장 데이터 제거)**
-    // 실제 세션 스토리지 사용 시 활성화
-    // sessionStorage.removeItem('keycapColors');
-    // sessionStorage.removeItem('keyboardDesign');
-    // localStorage.removeItem('keyboardCustom');
-    
-    // **2. 메모리상 키캡 색상 데이터만 초기화**
-    const cleanKeycapColors = {};
+      const cleanKeycapColors = {};
 
-    // **3. 추천 요청 (현재 베어본, 스위치 색상 + 빈 키캡 색상으로)**
-    const result = await fetchKeyboardRecommendation({
-      size,
-      baseColor,
-      switchColor,
-      keycapColors: cleanKeycapColors, // 빈 객체로 요청
-    });
+      const result = await fetchKeyboardRecommendation({
+        size,
+        baseColor,
+        switchColor,
+        keycapColors: cleanKeycapColors, // 빈 객체로 요청
+      });
 
-    if (result.status === "OK") {
-      // 전체 응답 결과를 저장
-      setRecommendationResult(result);
-      // 추천 설명 표시 상태를 true로 설정
-      setShowDescription(true);
-      
-      const recommendedKeyboard = result.data.keyboards[0];
+      if (result.status === "OK") {
+        setRecommendationResult(result);
+        setShowDescription(true);
 
-      if (recommendedKeyboard) {
-        // **4. 베어본 색상 업데이트**
-        if (recommendedKeyboard.barebone) {
-          setBaseColor(recommendedKeyboard.barebone);
-          // 3D 모델에 즉시 적용
-          if (modelRef.current && modelRef.current.updateBaseColor) {
-            modelRef.current.updateBaseColor(recommendedKeyboard.barebone);
-          }
-        }
+        const recommendedKeyboard = result.data.keyboards[0];
 
-        // **5. 스위치 색상 업데이트**
-        if (recommendedKeyboard.switch) {
-          const switchColorValue = getSwitchColorFromName(recommendedKeyboard.switch);
-          setSwitchColor(switchColorValue);
-          // 3D 모델에 즉시 적용
-          if (modelRef.current && modelRef.current.updateSwitchColor) {
-            modelRef.current.updateSwitchColor(switchColorValue);
-          }
-        }
+        if (recommendedKeyboard) {
 
-        // **6. 키캡 색상 업데이트**
-        if (recommendedKeyboard.keycap) {
-          const keycapIds = KEYCAP_IDS[size] || [];
-          const newKeycapColors = {};
-          keycapIds.forEach(id => {
-            newKeycapColors[id] = recommendedKeyboard.keycap;
-          });
-          
-          // 상태 업데이트
-          setKeycapColors(newKeycapColors);
-          
-          // 키캡 모델 표시 상태로 전환
-          setSelectedModel("keycap");
-          setShowKeycapArray(true);
-          setShowColorPicker(false);
-          
-          // 3D 모델에 키캡 색상 적용
-          setTimeout(() => {
-            if (modelRef.current) {
-              if (modelRef.current.updateAllKeycapColors) {
-                modelRef.current.updateAllKeycapColors(newKeycapColors);
-              } else if (modelRef.current.updateKeycapColor) {
-                keycapIds.forEach(id => {
-                  modelRef.current.updateKeycapColor(id, recommendedKeyboard.keycap);
-                });
-              }
+          if (recommendedKeyboard.barebone) {
+            setBaseColor(recommendedKeyboard.barebone);
+
+            if (modelRef.current && modelRef.current.updateBaseColor) {
+              modelRef.current.updateBaseColor(recommendedKeyboard.barebone);
             }
-          }, 300); // 짧은 딜레이로 적용
-        }
+          }
 
-        alert("AI가 새로운 색상을 추천했습니다!");
+          if (recommendedKeyboard.switch) {
+            const switchColorValue = getSwitchColorFromName(
+              recommendedKeyboard.switch
+            );
+            setSwitchColor(switchColorValue);
+
+            if (modelRef.current && modelRef.current.updateSwitchColor) {
+              modelRef.current.updateSwitchColor(switchColorValue);
+            }
+          }
+
+          if (recommendedKeyboard.keycap) {
+            const keycapIds = KEYCAP_IDS[size] || [];
+            const newKeycapColors = {};
+            keycapIds.forEach((id) => {
+              newKeycapColors[id] = recommendedKeyboard.keycap;
+            });
+
+            setKeycapColors(newKeycapColors);
+            setSelectedModel("keycap");
+            setShowKeycapArray(true);
+            setShowColorPicker(false);
+
+            setTimeout(() => {
+              if (modelRef.current) {
+                if (modelRef.current.updateAllKeycapColors) {
+                  modelRef.current.updateAllKeycapColors(newKeycapColors);
+                } else if (modelRef.current.updateKeycapColor) {
+                  keycapIds.forEach((id) => {
+                    modelRef.current.updateKeycapColor(
+                      id,
+                      recommendedKeyboard.keycap
+                    );
+                  });
+                }
+              }
+            }, 300); // 짧은 딜레이로 적용
+          }
+
+          alert("AI가 새로운 색상을 추천했습니다!");
+        }
+      } else {
+        alert("추천 색상을 가져오는 데 실패했습니다.");
       }
-    } else {
-      alert("추천 색상을 가져오는 데 실패했습니다.");
+    } catch (error) {
+      console.error(error);
+      alert(error.message);
+    } finally {
+      setIsLoading(false);
     }
-  } catch (error) {
-    console.error(error);
-    alert(error.message);
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
 
   const handleSaveClick = async () => {
     if (!user?.email) {
@@ -569,123 +526,105 @@ const handleRecommendation = async () => {
       return;
     }
 
-    // 모달 열기 전에 제목 초기화 (이전에 입력한 값이 남아있지 않도록)
     setDesignTitle("");
     setSaveModalOpen(true);
   };
 
-  // 제목 변경 핸들러
   const handleTitleChange = (e) => {
     setDesignTitle(e.target.value);
   };
 
   const handleConfirmSave = async () => {
-  // 제목이 비어있는지 확인
-  if (!designTitle.trim()) {
-    alert("제목을 입력해주세요.");
-    return;
-  }
-  
-  setSaveModalOpen(false);
-
-  // FormData 객체 생성
-  const formData = new FormData();
-
-  // 사용자가 실제로 변경한 키캡 색상만 필터링
-  const filteredKeycapColors = {};
-  Object.keys(keycapColors).forEach(key => {
-    // 기본 색상(#ffffff)이 아닌 경우만 포함
-    if (keycapColors[key] && keycapColors[key] !== "#ffffff") {
-      filteredKeycapColors[key] = keycapColors[key];
+    if (!designTitle.trim()) {
+      alert("제목을 입력해주세요.");
+      return;
     }
-  });
 
-  // JSON 데이터 생성 - 새로운 API 형식에 맞게 수정
-  const jsonData = {
-    email: user.email,
-    title: designTitle,
-    barebonecolor: baseColor,
-    keyboardtype: size,
-    keycapcolor: filteredKeycapColors, // keycapcolors에서 keycapcolor로 변경
-    switchcolor: switchColor,
+    setSaveModalOpen(false);
+
+    const formData = new FormData();
+    const filteredKeycapColors = {};
+    Object.keys(keycapColors).forEach((key) => {
+      // 기본 색상(#ffffff)이 아닌 경우만 포함
+      if (keycapColors[key] && keycapColors[key] !== "#ffffff") {
+        filteredKeycapColors[key] = keycapColors[key];
+      }
+    });
+
+    const jsonData = {
+      email: user.email,
+      title: designTitle,
+      barebonecolor: baseColor,
+      keyboardtype: size,
+      keycapcolor: filteredKeycapColors, // keycapcolors에서 keycapcolor로 변경
+      switchcolor: switchColor,
+    };
+
+    formData.append(
+      "DTO",
+      new Blob([JSON.stringify(jsonData)], {
+        type: "application/json",
+      })
+    );
+
+    if (modelImage) {
+      const imageData = modelImage.split(",")[1];
+      const byteCharacters = atob(imageData);
+      const byteArrays = [];
+
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteArrays.push(byteCharacters.charCodeAt(i));
+      }
+
+      const byteArray = new Uint8Array(byteArrays);
+      const blob = new Blob([byteArray], { type: "image/png" });
+      const fileName = `keyboard_${new Date().getTime()}.png`;
+      const file = new File([blob], fileName, { type: "image/png" });
+      formData.append("file", file);
+    }
+
+    try {
+      const result = await saveItem(formData);
+
+      if (result.success) {
+        alert("저장이 완료되었습니다.");
+      } else {
+        console.error("저장 실패:", result.error);
+        alert(`저장 중 오류가 발생했습니다: ${result.message}`);
+      }
+    } catch (error) {
+      console.error("저장 중 예외 발생:", error);
+      alert("저장 중 오류가 발생했습니다.");
+    }
   };
-
-  // FormData에 JSON 추가
-  formData.append(
-    "DTO",
-    new Blob([JSON.stringify(jsonData)], {
-      type: "application/json",
-    })
-  );
-
-  // Base64 이미지를 파일로 변환
-  if (modelImage) {
-    // Base64 데이터에서 실제 바이너리 데이터 추출 (data:image/png;base64, 부분 제거)
-    const imageData = modelImage.split(",")[1];
-    const byteCharacters = atob(imageData);
-    const byteArrays = [];
-
-    for (let i = 0; i < byteCharacters.length; i++) {
-      byteArrays.push(byteCharacters.charCodeAt(i));
-    }
-
-    const byteArray = new Uint8Array(byteArrays);
-    const blob = new Blob([byteArray], { type: "image/png" });
-
-    // 파일 이름 생성 (현재 시간 기준)
-    const fileName = `keyboard_${new Date().getTime()}.png`;
-    const file = new File([blob], fileName, { type: "image/png" });
-
-    // FormData에 파일 추가
-    formData.append("file", file);
-  }
-
-  try {
-    // saveItem 함수 호출
-    const result = await saveItem(formData);
-
-    if (result.success) {
-      alert("저장이 완료되었습니다.");
-    } else {
-      console.error("저장 실패:", result.error);
-      alert(`저장 중 오류가 발생했습니다: ${result.message}`);
-    }
-  } catch (error) {
-    console.error("저장 중 예외 발생:", error);
-    alert("저장 중 오류가 발생했습니다.");
-  }
-};
 
   useEffect(() => {
     if (selectedModel) {
       console.log(`선택된 모델: ${selectedModel}, 사이즈: ${size}`);
     }
   }, [selectedModel, size]);
-  
-  // 컴포넌트 마운트 시점에 초기화 실행 (필요한 경우)
+
   useEffect(() => {
-    // 최초 마운트 시 모든 상태 초기화
     setBaseColor("#ffffff");
     setSwitchColor("#ffffff");
     setKeycapColors({});
   }, []);
 
+  const Test = styled.div`
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    width: 400px;
+    height: 90%;
+    background-color: #e9ecef;
+    top: 0;
+    right: 0;
+  `;
 
-const Test = styled.div`
-  display: flex;
-  flex-direction: column;
-  position: absolute;
-  width: 400px;
-  height: 90%;
-  background-color: #e9ecef;
-  top: 0;
-  right: 0;
-`
-  // 스위치 설명 렌더링 함수
   const renderSwitchDescription = () => {
     return (
       <Test>
-        {switchData.map((switchInfo, index) => (
+        {SwitchData.map((switchInfo, index) => (
           <SwitchInfo key={index}>
             <SwitchHeader>
               <SwitchColorBox color={switchInfo.color} />
@@ -715,54 +654,114 @@ const Test = styled.div`
     const descriptions = recommendationResult.data?.description || [];
 
     return (
-      <div>
-        
+      <div style={{ padding: "20px", fontFamily: "sans-serif" }}>
         {keyboards.length > 0 && (
           <div>
-            <h4>추천 색상 조합</h4>
+            <h3
+              style={{
+                marginBottom: "15px",
+                borderBottom: "2px solid #ccc",
+                paddingBottom: "5px",
+              }}
+            >
+              🎨 추천 색상 조합
+            </h3>
             {keyboards.map((keyboard, index) => (
-              <div key={index} style={{ marginBottom: '15px' }}>
-                <p><strong>조합 {index + 1}</strong></p>
-                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '5px' }}>
-                  <div style={{ 
-                    width: '20px', 
-                    height: '20px', 
-                    backgroundColor: keyboard.barebone, 
-                    marginRight: '10px',
-                    border: '1px solid #ddd'
-                  }}></div>
+              <div
+                key={index}
+                style={{
+                  border: "1px solid #e0e0e0",
+                  borderRadius: "10px",
+                  padding: "15px",
+                  marginBottom: "20px",
+                  boxShadow: "0 2px 5px rgba(0,0,0,0.05)",
+                  backgroundColor: "#fafafa",
+                }}
+              >
+
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    marginBottom: "8px",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: "24px",
+                      height: "24px",
+                      backgroundColor: keyboard.barebone,
+                      marginRight: "12px",
+                      border: "1px solid #ccc",
+                      borderRadius: "4px",
+                    }}
+                  ></div>
                   <span>베어본: {keyboard.barebone}</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '5px' }}>
-                  <div style={{ 
-                    width: '20px', 
-                    height: '20px', 
-                    backgroundColor: keyboard.keycap, 
-                    marginRight: '10px',
-                    border: '1px solid #ddd'
-                  }}></div>
+
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    marginBottom: "8px",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: "24px",
+                      height: "24px",
+                      backgroundColor: keyboard.keycap,
+                      marginRight: "12px",
+                      border: "1px solid #ccc",
+                      borderRadius: "4px",
+                    }}
+                  ></div>
                   <span>키캡: {keyboard.keycap}</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <div style={{ 
-                    width: '20px', 
-                    height: '20px', 
-                    backgroundColor: getSwitchColorFromName(keyboard.switch), 
-                    marginRight: '10px',
-                    border: '1px solid #ddd'
-                  }}></div>
+
+                <div style={{ display: "flex", alignItems: "center" }}>
+                  <div
+                    style={{
+                      width: "24px",
+                      height: "24px",
+                      backgroundColor: getSwitchColorFromName(keyboard.switch),
+                      marginRight: "12px",
+                      border: "1px solid #ccc",
+                      borderRadius: "4px",
+                    }}
+                  ></div>
                   <span>스위치: {keyboard.switch}</span>
                 </div>
               </div>
             ))}
           </div>
         )}
-        
+
         {descriptions.length > 0 && (
-          <div>
-            <h4>키보드 설명</h4>
+          <div style={{ marginTop: "40px" }}>
+            <h3
+              style={{
+                marginBottom: "15px",
+                borderBottom: "2px solid #ccc",
+                paddingBottom: "5px",
+              }}
+            >
+              📝 키보드 설명
+            </h3>
             {descriptions.map((desc, index) => (
-              <p key={index}>{desc}</p>
+              <h4
+                key={index}
+                style={{
+                  fontWeight: "normal",
+                  backgroundColor: "#f9f9f9",
+                  padding: "10px 15px",
+                  borderRadius: "8px",
+                  marginBottom: "10px",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+                }}
+              >
+                {desc}
+              </h4>
             ))}
           </div>
         )}
@@ -786,7 +785,7 @@ const Test = styled.div`
           </IconButton>
           <IconButton onClick={handleRecommendation} disabled={isLoading}>
             <FiThumbsUp />
-            {isLoading ? '추천 중...' : '추천받기'}
+            {isLoading ? "추천 중..." : "추천받기"}
           </IconButton>
           <SaveButton onClick={handleSaveClick}>
             <FiSave />
@@ -811,7 +810,7 @@ const Test = styled.div`
               스위치
             </SelectOption>
 
-           <SelectOption
+            <SelectOption
               selected={selectedModel === "keycap"}
               onClick={() => handleModelSelect("keycap")}
             >
@@ -864,10 +863,7 @@ const Test = styled.div`
 
         {/* LED 버튼을 밖으로 이동 */}
         <LedButtonContainer>
-          <LedButton 
-            onClick={handleLedToggle}
-            active={ledEnabled}
-          >
+          <LedButton onClick={handleLedToggle} active={ledEnabled}>
             <LedIcon active={ledEnabled} />
             LED {ledEnabled ? "OFF" : "ON"}
           </LedButton>
@@ -910,8 +906,8 @@ const Test = styled.div`
 
       {/* 키캡 선택 시에만 KeycapArray 컴포넌트 표시 */}
       {showKeycapArray && (
-        <KeycapArray           
-          size={size || "60"} 
+        <KeycapArray
+          size={size || "60"}
           onClose={() => setShowKeycapArray(false)}
           onKeycapColorChange={handleKeycapColorChange}
           initialColors={keycapColors}

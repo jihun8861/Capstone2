@@ -14,11 +14,15 @@ export const KeyboardPart = ({
   visible = true,
   color = null,
   centerOffset,
-  meshRef, // ref 추가
-  ledEnabled = false
+  meshRef,
+  ledEnabled = false,
+  keycapColors = {},
+  keycapIndex = null,
+  resetTrigger = 0 // 리셋 트리거 추가
 }) => {
   const { scene } = useGLTF(modelPath);
   const modelRef = useRef();
+  const originalMaterialsRef = useRef(new Map()); // 원본 재질 저장
   const isTopCase = modelPath.includes("5.TopCase.glb");
   const isTopSwitch = modelPath.includes("TopSwitchs.glb");
   const isPCB = modelPath.includes("2.PCB.glb");
@@ -27,81 +31,153 @@ export const KeyboardPart = ({
   // LED 색상 설정
   const ledColor = new THREE.Color("#FFFFFF");
   const ledIntensity = 10;
-
-  // LED 효과용 재질 참조 저장
   const ledMaterialRef = useRef(null);
 
+  // 키캡 ID 추출 함수 (파일명에서)
+  const getKeycapId = () => {
+    if (!isKeycap) return null;
+    const match = modelPath.match(/\/([^\/]+)\.glb$/);
+    return match ? match[1] : null;
+  };
+
+  // 키캡 색상 매핑 함수 개선
+  const getKeycapColor = () => {
+    if (!isKeycap || !keycapColors || Object.keys(keycapColors).length === 0) {
+      return null; // 기본 색상 사용하지 않고 null 반환
+    }
+
+    const keycapId = getKeycapId();
+    
+    // 1. keycapId로 직접 찾기
+    if (keycapId && keycapColors[keycapId]) {
+      return keycapColors[keycapId];
+    }
+
+    // 2. keycapIndex로 찾기
+    if (keycapIndex !== null) {
+      const keycapKey = `keycap_${keycapIndex}`;
+      if (keycapColors[keycapKey]) {
+        return keycapColors[keycapKey];
+      }
+    }
+
+    // 3. index로 찾기
+    if (index !== undefined) {
+      const keycapKey = `keycap_${index}`;
+      if (keycapColors[keycapKey]) {
+        return keycapColors[keycapKey];
+      }
+    }
+
+    return null; // 색상을 찾지 못하면 null 반환
+  };
+
+  // 원본 재질 저장 함수
+  const saveOriginalMaterials = (scene) => {
+    scene.traverse((child) => {
+      if (child.isMesh && child.material) {
+        originalMaterialsRef.current.set(child.uuid, child.material.clone());
+      }
+    });
+  };
+
+  // 재질 초기화 함수
+  const resetMaterials = (scene) => {
+    scene.traverse((child) => {
+      if (child.isMesh && originalMaterialsRef.current.has(child.uuid)) {
+        const originalMaterial = originalMaterialsRef.current.get(child.uuid);
+        child.material = originalMaterial.clone();
+      }
+    });
+  };
+
+  // 재질 적용 함수
+  const applyMaterial = (child, newColor, materialType = 'standard') => {
+    const originalMaterial = originalMaterialsRef.current.get(child.uuid) || child.material;
+    
+    if (materialType === 'pcb') {
+      const newMaterial = new THREE.MeshStandardMaterial({
+        color: originalMaterial.color || new THREE.Color("#ffffff"),
+        roughness: 0.2,
+        metalness: 0.6,
+        emissive: ledEnabled ? ledColor : new THREE.Color("#000000"),
+        emissiveIntensity: ledEnabled ? ledIntensity : 0,
+      });
+      child.material = newMaterial;
+      ledMaterialRef.current = newMaterial;
+    } else {
+      const newMaterial = new THREE.MeshStandardMaterial({
+        color: newColor ? new THREE.Color(newColor) : (originalMaterial.color || new THREE.Color("#ffffff")),
+        roughness: originalMaterial?.roughness ?? 0.5,
+        metalness: originalMaterial?.metalness ?? 0.3,
+      });
+      child.material = newMaterial;
+    }
+  };
+
+  // 초기 설정 및 원본 재질 저장
   useEffect(() => {
+    // 원본 재질 저장
+    saveOriginalMaterials(scene);
+
     scene.traverse((child) => {
       if (child.isMesh) {
         child.receiveShadow = true;
-  
-        if (isTopCase) {
-          child.castShadow = false;
-        } else {
-          child.castShadow = true;
-        }
-  
-        // PCB에 LED 효과 적용
-        if (isPCB) {
-          const originalMaterial = child.material;
-          const newMaterial = new THREE.MeshStandardMaterial({
-            color: originalMaterial.color || new THREE.Color("#ffffff"),
-            roughness: 0.2,
-            metalness: 0.6,
-            // LED가 활성화된 경우에만 발광 효과 적용
-            emissive: ledEnabled ? ledColor : new THREE.Color("#000000"),
-            emissiveIntensity: ledEnabled ? ledIntensity : 0,
-          });
-          child.material = newMaterial;
-          
-          // 재질 참조 저장 (나중에 업데이트하기 위해)
-          ledMaterialRef.current = newMaterial;
-          
-          // 외부에서 제공된 ref가 있다면 메시 설정
-          if (meshRef) {
-            meshRef.current = child;
-          }
-        }
-        // 다른 파트에 색상 적용 (기존 로직)
-        else if ((isTopCase || isTopSwitch || isKeycap) && color) {
-          const originalMaterial = child.material;
-          const newMaterial = new THREE.MeshStandardMaterial({
-            color: new THREE.Color(color),
-            roughness: originalMaterial?.roughness ?? 0.5,
-            metalness: originalMaterial?.metalness ?? 0.3,
-          });
-          child.material = newMaterial;
+        child.castShadow = !isTopCase;
+
+        if (meshRef && isPCB) {
+          meshRef.current = child;
         }
       }
     });
 
-    
-  
-    // 중심점 계산
+    // 중심점 계산 및 설정
     const box = new THREE.Box3().setFromObject(scene);
     const center = new THREE.Vector3();
     box.getCenter(center);
-  
-    // 중심점을 원점으로 맞추기
     scene.position.sub(center);
-  }, [scene, color, isTopCase, isTopSwitch, isPCB, isKeycap, meshRef]);
+  }, [scene, meshRef, isPCB, isTopCase]);
 
-  // color가 바뀔 때마다 메시 색상을 동적으로 업데이트
-useEffect(() => {
-  if (scene && color && (isTopCase || isTopSwitch || isKeycap)) {
+  // 리셋 트리거 감지 시 재질 초기화
+  useEffect(() => {
+    if (resetTrigger > 0) {
+      console.log(`키캡 ${getKeycapId()} 재질 초기화됨`);
+      resetMaterials(scene);
+    }
+  }, [resetTrigger, scene]);
+
+  // 색상 적용 효과
+  useEffect(() => {
     scene.traverse((child) => {
-      if (child.isMesh && child.material) {
-        // 기존 material을 복제하고 색상 변경
-        child.material = child.material.clone();
-        child.material.color.set(color);
+      if (child.isMesh) {
+        // PCB LED 효과
+        if (isPCB) {
+          applyMaterial(child, null, 'pcb');
+        }
+        // 키캡 색상 적용
+        else if (isKeycap) {
+          const keycapColor = getKeycapColor();
+          console.log(`키캡 ${getKeycapId()} 색상 적용:`, keycapColor);
+          
+          if (keycapColor) {
+            applyMaterial(child, keycapColor);
+          } else {
+            // 색상이 없으면 원본 재질로 복원
+            const originalMaterial = originalMaterialsRef.current.get(child.uuid);
+            if (originalMaterial) {
+              child.material = originalMaterial.clone();
+            }
+          }
+        }
+        // 다른 파트 색상 적용
+        else if ((isTopCase || isTopSwitch) && color) {
+          applyMaterial(child, color);
+        }
       }
     });
-  }
-}, [color, scene, isTopCase, isTopSwitch, isKeycap]);
+  }, [scene, color, isTopCase, isTopSwitch, isPCB, isKeycap, keycapColors, index, keycapIndex, ledEnabled]);
 
-
-  // LED 상태가 변경될 때마다 재질 업데이트
+  // LED 상태 변경 시 업데이트
   useEffect(() => {
     if (isPCB && ledMaterialRef.current) {
       ledMaterialRef.current.emissive = ledEnabled ? ledColor : new THREE.Color("#000000");
@@ -109,7 +185,7 @@ useEffect(() => {
     }
   }, [ledEnabled, isPCB]);
 
-  // LED 펄스 효과 (시간에 따라 밝기 변화)
+  // LED 펄스 효과
   useFrame(({ clock }) => {
     if (isPCB && ledMaterialRef.current && ledEnabled) {
       const pulseFactor = 0.2 * Math.sin(clock.getElapsedTime() * 2) + 0.8;
@@ -117,21 +193,13 @@ useEffect(() => {
     }
   });
 
+  // 애니메이션 프레임
   useFrame(() => {
     if (modelRef.current) {
       if (partType === "base") {
-        const initialPos = KEYBOARD_POSITIONS.getInitialPosition(
-          size,
-          partType,
-          index
-        );
-        const finalPos = KEYBOARD_POSITIONS.getFinalPosition(
-          size,
-          partType,
-          index
-        );
+        const initialPos = KEYBOARD_POSITIONS.getInitialPosition(size, partType, index);
+        const finalPos = KEYBOARD_POSITIONS.getFinalPosition(size, partType, index);
 
-        // 중심점 오프셋 적용
         modelRef.current.position.x = THREE.MathUtils.lerp(
           initialPos[0],
           finalPos[0],
@@ -150,18 +218,9 @@ useEffect(() => {
           animationProgress
         ) + centerOffset.z;
       } else {
-        const initialPos = KEYBOARD_POSITIONS.getInitialPosition(
-          size,
-          partType,
-          index
-        );
-        const finalPos = KEYBOARD_POSITIONS.getFinalPosition(
-          size, 
-          partType,
-          index
-        );
+        const initialPos = KEYBOARD_POSITIONS.getInitialPosition(size, partType, index);
+        const finalPos = KEYBOARD_POSITIONS.getFinalPosition(size, partType, index);
 
-        // 중심점 오프셋 적용
         modelRef.current.position.x = initialPos[0] + centerOffset.x;
         modelRef.current.position.y = THREE.MathUtils.lerp(
           initialPos[1],

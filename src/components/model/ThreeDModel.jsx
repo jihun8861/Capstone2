@@ -84,7 +84,7 @@ const Model = ({
   resetStatus,
   keycapColors = {},
   ledEnabled = false,
-  viewerMode = false, // 뷰어 모드 prop 추가
+  viewerMode = false,
 }) => {
   const [baseAnimationProgress, setBaseAnimationProgress] = useState(0);
   const [switchAnimationProgress, setSwitchAnimationProgress] = useState(0);
@@ -93,79 +93,147 @@ const Model = ({
   const [showSwitch, setShowSwitch] = useState(false);
   const [showKeycap, setShowKeycap] = useState(false);
   const [showEngraving, setShowEngraving] = useState(false);
-  const [currentKeycapColors, setCurrentKeycapColors] = useState(keycapColors);
+  const [currentKeycapColors, setCurrentKeycapColors] = useState({});
+  const [resetTrigger, setResetTrigger] = useState(0);
+  const [prevSize, setPrevSize] = useState(size);
+  const [isInitialized, setIsInitialized] = useState(false); // 초기화 상태 추가
+
   const groupRef = useRef();
-  const pcbRef = useRef(); // PCB 모델에 대한 참조 추가
+  const pcbRef = useRef();
   const scale = KEYBOARD_POSITIONS.getScale(size);
-
-  // 키보드 사이즈에 따른 중심점 오프셋
-  const centerOffset =
-    KEYBOARD_CENTER_OFFSETS[size] || KEYBOARD_CENTER_OFFSETS["100"];
-
+  const centerOffset = KEYBOARD_CENTER_OFFSETS[size] || KEYBOARD_CENTER_OFFSETS["100"];
+  
   const baseAnimationExecuted = useRef(false);
   const switchAnimationExecuted = useRef({});
   const keycapAnimationExecuted = useRef({});
   const engravingAnimationExecuted = useRef({});
 
-  // 뷰어 모드에서는 모든 파트를 즉시 표시하도록 수정
+  // 키캡 색상 완전 초기화 함수
+  const clearAllKeycapColors = () => {
+    console.log("키캡 색상 완전 초기화 실행");
+    setCurrentKeycapColors({});
+    setResetTrigger(prev => prev + 1);
+    
+    // 모든 사이즈의 세션 스토리지 초기화
+    ['60', '65', '75', '80', '100'].forEach(keyboardSize => {
+      clearKeycapColorsFromSession(keyboardSize);
+    });
+    
+    // 전체 키캡 관련 세션 스토리지 키 삭제
+    Object.keys(sessionStorage).forEach(key => {
+      if (key.includes('keycap') || key.includes('keyboard')) {
+        sessionStorage.removeItem(key);
+      }
+    });
+  };
+
+  // 컴포넌트 마운트 시 초기화 (뷰어 모드가 아닌 경우에만)
+  useEffect(() => {
+    if (!viewerMode && !isInitialized) {
+      console.log("일반 모드 - 초기 세션 초기화");
+      clearAllKeycapColors();
+      setIsInitialized(true);
+    }
+  }, [viewerMode, isInitialized]);
+
+  // 사이즈 변경 감지 및 처리
+  useEffect(() => {
+    if (prevSize !== size) {
+      console.log(`키보드 사이즈 변경: ${prevSize} -> ${size}`);
+      
+      if (!viewerMode) {
+        // 일반 모드에서는 사이즈 변경 시 완전 초기화
+        clearAllKeycapColors();
+        
+        // 애니메이션 상태 초기화
+        baseAnimationExecuted.current = false;
+        switchAnimationExecuted.current = {};
+        keycapAnimationExecuted.current = {};
+        engravingAnimationExecuted.current = {};
+        
+        setBaseAnimationProgress(0);
+        setSwitchAnimationProgress(0);
+        setKeycapAnimationProgress(0);
+        setEngravingAnimationProgress(0);
+        setShowSwitch(false);
+        setShowKeycap(false);
+        setShowEngraving(false);
+      } else {
+        // 뷰어 모드에서는 전달받은 색상만 사용
+        console.log("뷰어 모드 - 전달받은 keycapColors 사용:", keycapColors);
+        setCurrentKeycapColors(keycapColors || {});
+      }
+      
+      setPrevSize(size);
+    }
+  }, [size, prevSize, viewerMode, keycapColors]);
+
+  // 뷰어 모드 초기화
   useEffect(() => {
     if (viewerMode) {
-      // 뷰어 모드에서는 모든 파트를 즉시 표시
+      console.log("뷰어 모드 초기화 시작");
+      
+      // 뷰어 모드에서는 세션 스토리지 사용하지 않고 prop으로 받은 색상만 사용
+      setCurrentKeycapColors(keycapColors || {});
+      
       setShowSwitch(true);
-      setShowKeycap(true);
+      setShowKeycap(true);  
       setShowEngraving(true);
       
-      // 애니메이션 진행률을 즉시 완료로 설정
+      setBaseAnimationProgress(1);
       setSwitchAnimationProgress(1);
       setKeycapAnimationProgress(1);
       setEngravingAnimationProgress(1);
       
-      // 애니메이션 실행 상태도 완료로 설정
+      baseAnimationExecuted.current = true;
       switchAnimationExecuted.current[size] = true;
       keycapAnimationExecuted.current[size] = true;
       engravingAnimationExecuted.current[size] = true;
+      
+      console.log("뷰어 모드 초기화 완료 - 키캡 색상:", keycapColors);
     }
-  }, [viewerMode, size]);
+  }, [viewerMode, size, keycapColors]);
 
-  // 기존 selectedModel 처리 로직은 뷰어 모드가 아닐 때만 실행
+  // selectedModel 처리 로직
   useEffect(() => {
-    if (viewerMode) return; // 뷰어 모드에서는 이 로직을 건너뜀
+    if (viewerMode) {
+      console.log("뷰어 모드에서는 selectedModel 로직 건너뜀");
+      return;
+    }
     
-    if (selectedModel === "switch" && !showSwitch) {
+    console.log("selectedModel 처리:", selectedModel);
+    
+    if (selectedModel === "complete") {
       setShowSwitch(true);
-      if (switchAnimationExecuted.current[size]) {
-        setSwitchAnimationProgress(1);
-        return;
-      }
-
-      setTimeout(() => {
-        const duration = 1500;
-        const startTime = Date.now();
-
-        const updateAnimation = () => {
-          const elapsed = Date.now() - startTime;
-          const progress = Math.min(elapsed / duration, 1);
-          setSwitchAnimationProgress(progress);
-          if (progress < 1) {
-            requestAnimationFrame(updateAnimation);
-          } else {
-            switchAnimationExecuted.current[size] = true;
-          }
-        };
-
-        requestAnimationFrame(updateAnimation);
-      }, 100);
-    } else if (selectedModel === "keycap" && !showKeycap) {
       setShowKeycap(true);
       setShowEngraving(true);
-
-      if (keycapAnimationExecuted.current[size]) {
-        setKeycapAnimationProgress(1);
-      } else {
+      
+      // 스위치 애니메이션
+      if (!switchAnimationExecuted.current[size]) {
         setTimeout(() => {
           const duration = 1500;
           const startTime = Date.now();
-
+          const updateAnimation = () => {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            setSwitchAnimationProgress(progress);
+            if (progress < 1) {
+              requestAnimationFrame(updateAnimation);
+            } else {
+              switchAnimationExecuted.current[size] = true;
+            }
+          };
+          requestAnimationFrame(updateAnimation);
+        }, 100);
+      } else {
+        setSwitchAnimationProgress(1);
+      }
+      
+      // 키캡 애니메이션
+      if (!keycapAnimationExecuted.current[size]) {
+        setTimeout(() => {
+          const duration = 1500;
+          const startTime = Date.now();
           const updateAnimation = () => {
             const elapsed = Date.now() - startTime;
             const progress = Math.min(elapsed / duration, 1);
@@ -176,18 +244,17 @@ const Model = ({
               keycapAnimationExecuted.current[size] = true;
             }
           };
-
           requestAnimationFrame(updateAnimation);
         }, 100);
-      }
-
-      if (engravingAnimationExecuted.current[size]) {
-        setEngravingAnimationProgress(1);
       } else {
+        setKeycapAnimationProgress(1);
+      }
+      
+      // 각인 애니메이션
+      if (!engravingAnimationExecuted.current[size]) {
         setTimeout(() => {
           const duration = 1500;
           const startTime = Date.now();
-
           const updateAnimation = () => {
             const elapsed = Date.now() - startTime;
             const progress = Math.min(elapsed / duration, 1);
@@ -198,7 +265,75 @@ const Model = ({
               engravingAnimationExecuted.current[size] = true;
             }
           };
+          requestAnimationFrame(updateAnimation);
+        }, 100);
+      } else {
+        setEngravingAnimationProgress(1);
+      }
+    }
+    else if (selectedModel === "switch" && !showSwitch) {
+      setShowSwitch(true);
+      if (switchAnimationExecuted.current[size]) {
+        setSwitchAnimationProgress(1);
+        return;
+      }
 
+      setTimeout(() => {
+        const duration = 1500;
+        const startTime = Date.now();
+        const updateAnimation = () => {
+          const elapsed = Date.now() - startTime;
+          const progress = Math.min(elapsed / duration, 1);
+          setSwitchAnimationProgress(progress);
+          if (progress < 1) {
+            requestAnimationFrame(updateAnimation);
+          } else {
+            switchAnimationExecuted.current[size] = true;
+          }
+        };
+        requestAnimationFrame(updateAnimation);
+      }, 100);
+    } 
+    else if (selectedModel === "keycap" && !showKeycap) {
+      setShowKeycap(true);
+      setShowEngraving(true);
+
+      if (keycapAnimationExecuted.current[size]) {
+        setKeycapAnimationProgress(1);
+      } else {
+        setTimeout(() => {
+          const duration = 1500;
+          const startTime = Date.now();
+          const updateAnimation = () => {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            setKeycapAnimationProgress(progress);
+            if (progress < 1) {
+              requestAnimationFrame(updateAnimation);
+            } else {
+              keycapAnimationExecuted.current[size] = true;
+            }
+          };
+          requestAnimationFrame(updateAnimation);
+        }, 100);
+      }
+
+      if (engravingAnimationExecuted.current[size]) {
+        setEngravingAnimationProgress(1);
+      } else {
+        setTimeout(() => {
+          const duration = 1500;
+          const startTime = Date.now();
+          const updateAnimation = () => {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            setEngravingAnimationProgress(progress);
+            if (progress < 1) {
+              requestAnimationFrame(updateAnimation);
+            } else {
+              engravingAnimationExecuted.current[size] = true;
+            }
+          };
           requestAnimationFrame(updateAnimation);
         }, 100);
       }
@@ -209,72 +344,63 @@ const Model = ({
   useEffect(() => {
     if (pcbRef.current && pcbRef.current.material) {
       if (ledEnabled) {
-        // LED가 켜진 경우 발광 효과 추가
-        pcbRef.current.material.emissive = new THREE.Color(0x00ffff) // 밝은 청록색
+        pcbRef.current.material.emissive = new THREE.Color(0x00ffff);
         pcbRef.current.material.emissiveIntensity = 0.5;
       } else {
-        // LED가 꺼진 경우 발광 효과 제거
         pcbRef.current.material.emissive = new THREE.Color(0x000000);
         pcbRef.current.material.emissiveIntensity = 0;
       }
     }
   }, [ledEnabled]);
 
-  // keycapColors prop이 변경되면 currentKeycapColors 상태를 업데이트하고 세션 스토리지에 저장
+  // keycapColors prop 변경 처리 개선
   useEffect(() => {
-    setCurrentKeycapColors(keycapColors);
-    saveKeycapColorsToSession(size, keycapColors);
-  }, [keycapColors, size]);
+    if (viewerMode) {
+      // 뷰어 모드에서는 prop으로 받은 색상만 사용
+      console.log("뷰어 모드 - keycapColors 업데이트:", keycapColors);
+      setCurrentKeycapColors(keycapColors || {});
+    } else {
+      // 일반 모드에서만 세션 스토리지와 연동
+      console.log("일반 모드 - keycapColors 업데이트:", keycapColors);
+      
+      if (Object.keys(keycapColors).length === 0) {
+        console.log("빈 keycapColors 전달됨 - 초기화 실행");
+        clearAllKeycapColors();
+      } else {
+        setCurrentKeycapColors(keycapColors);
+        saveKeycapColorsToSession(size, keycapColors);
+      }
+    }
+  }, [keycapColors, size, viewerMode]);
 
-  // 다시 시작하기 효과를 위한 리셋 함수
+  // 리셋 처리 개선
   useEffect(() => {
-    if (resetStatus) {
-      // 모든 애니메이션 상태 초기화
+    if (resetStatus && !viewerMode) {
+      console.log("리셋 상태 감지 - 전체 초기화 실행");
+      
+      // 키캡 색상 완전 초기화
+      clearAllKeycapColors();
+      
+      // 애니메이션 상태 초기화
       baseAnimationExecuted.current = false;
       switchAnimationExecuted.current = {};
       keycapAnimationExecuted.current = {};
       engravingAnimationExecuted.current = {};
 
-      // 애니메이션 진행률 초기화
       setBaseAnimationProgress(0);
       setSwitchAnimationProgress(0);
       setKeycapAnimationProgress(0);
       setEngravingAnimationProgress(0);
 
-      // 스위치와 키캡, 각인 표시 상태 초기화
       setShowSwitch(false);
       setShowKeycap(false);
       setShowEngraving(false);
 
-      // 키캡 색상 초기화 - 상태와 세션 스토리지 모두 초기화
-      setCurrentKeycapColors({});
-      clearKeycapColorsFromSession(size);
-
-      // 애니메이션 다시 시작
       setTimeout(() => {
         animateBaseParts();
       }, 500);
     }
-  }, [resetStatus, size]);
-
-  // 사이즈 변경 시 상태 초기화
-  useEffect(() => {
-    baseAnimationExecuted.current = false;
-    switchAnimationExecuted.current = {};
-    keycapAnimationExecuted.current = {};
-    engravingAnimationExecuted.current = {};
-    setBaseAnimationProgress(0);
-    setSwitchAnimationProgress(0);
-    setKeycapAnimationProgress(0);
-    setEngravingAnimationProgress(0);
-    setShowSwitch(false);
-    setShowKeycap(false);
-    setShowEngraving(false);
-
-    // 사이즈 변경 시 해당 사이즈의 저장된 키캡 색상 정보를 가져옴
-    const savedColors = getKeycapColorsFromSession(size);
-    setCurrentKeycapColors(savedColors);
-  }, [size]);
+  }, [resetStatus, size, viewerMode]);
 
   // 기본 파트 애니메이션 함수
   const animateBaseParts = () => {
@@ -295,11 +421,23 @@ const Model = ({
     requestAnimationFrame(updateAnimation);
   };
 
+  // 기본 애니메이션 시작
   useEffect(() => {
+    if (viewerMode) return;
     if (baseAnimationExecuted.current) return;
     const timer = setTimeout(animateBaseParts, 500);
     return () => clearTimeout(timer);
-  }, [size]);
+  }, [size, viewerMode]);
+
+  // 컴포넌트 언마운트 시 정리 (뷰어 모드가 아닌 경우에만)
+  useEffect(() => {
+    return () => {
+      if (!viewerMode) {
+        console.log("Model 컴포넌트 언마운트 - 세션 정리");
+        // 언마운트 시에는 초기화하지 않음 - 다른 페이지에서 사용할 수 있음
+      }
+    };
+  }, [viewerMode]);
 
   const BASE_MODEL_PATHS = [
     `/keyboard/${size}keyboard/1.BottomCase.glb`,
@@ -313,88 +451,22 @@ const Model = ({
   const BOTTOM_SWITCH_MODEL_PATH = `/keyboard/${size}keyboard/${size}BottomSwitchs.glb`;
   const TOP_SWITCH_MODEL_PATH = `/keyboard/${size}keyboard/${size}TopSwitchs.glb`;
   const ENGRAVING_MODEL_PATH = `/keyboard/${size}keyboard/${size}Engraving.glb`;
-
-  // 키캡 아이디 목록 가져오기
   const keycapIds = KEYCAP_IDS[size] || KEYCAP_IDS["100"];
 
-  useEffect(() => {
-    if (selectedModel === "switch" && !showSwitch) {
-      setShowSwitch(true);
-      if (switchAnimationExecuted.current[size]) {
-        setSwitchAnimationProgress(1);
-        return;
-      }
-
-      setTimeout(() => {
-        const duration = 1500;
-        const startTime = Date.now();
-
-        const updateAnimation = () => {
-          const elapsed = Date.now() - startTime;
-          const progress = Math.min(elapsed / duration, 1);
-          setSwitchAnimationProgress(progress);
-          if (progress < 1) {
-            requestAnimationFrame(updateAnimation);
-          } else {
-            switchAnimationExecuted.current[size] = true;
-          }
-        };
-
-        requestAnimationFrame(updateAnimation);
-      }, 100);
-    } else if (selectedModel === "keycap" && !showKeycap) {
-      setShowKeycap(true);
-      setShowEngraving(true); // 키캡 선택 시 각인도 함께 표시
-
-      if (keycapAnimationExecuted.current[size]) {
-        setKeycapAnimationProgress(1);
-      } else {
-        setTimeout(() => {
-          const duration = 1500;
-          const startTime = Date.now();
-
-          const updateAnimation = () => {
-            const elapsed = Date.now() - startTime;
-            const progress = Math.min(elapsed / duration, 1);
-            setKeycapAnimationProgress(progress);
-            if (progress < 1) {
-              requestAnimationFrame(updateAnimation);
-            } else {
-              keycapAnimationExecuted.current[size] = true;
-            }
-          };
-
-          requestAnimationFrame(updateAnimation);
-        }, 100);
-      }
-
-      // 각인 애니메이션 실행
-      if (engravingAnimationExecuted.current[size]) {
-        setEngravingAnimationProgress(1);
-      } else {
-        setTimeout(() => {
-          const duration = 1500;
-          const startTime = Date.now();
-
-          const updateAnimation = () => {
-            const elapsed = Date.now() - startTime;
-            const progress = Math.min(elapsed / duration, 1);
-            setEngravingAnimationProgress(progress);
-            if (progress < 1) {
-              requestAnimationFrame(updateAnimation);
-            } else {
-              engravingAnimationExecuted.current[size] = true;
-            }
-          };
-
-          requestAnimationFrame(updateAnimation);
-        }, 100);
-      }
-    }
-  }, [selectedModel, size, showSwitch, showKeycap, showEngraving]);
+  console.log("렌더링 상태:", {
+    size,
+    viewerMode,
+    showSwitch,
+    showKeycap,
+    showEngraving,
+    currentKeycapColors: Object.keys(currentKeycapColors).length,
+    resetTrigger,
+    isInitialized
+  });
 
   return (
     <group ref={groupRef} position={[0, 0, 0]}>
+      {/* 베이스 파트들 */}
       {BASE_MODEL_PATHS.map((path, index) => (
         <KeyboardPart
           key={`base-${index}`}
@@ -406,13 +478,13 @@ const Model = ({
           size={size}
           color={path.includes("5.TopCase.glb") ? baseColor : null}
           centerOffset={centerOffset}
-          // PCB 모델에 ref 전달
           meshRef={path.includes("2.PCB.glb") ? pcbRef : null}
-          // PCB 모델에 ledEnabled 전달
           ledEnabled={path.includes("2.PCB.glb") ? ledEnabled : false}
+          resetTrigger={resetTrigger}
         />
       ))}
 
+      {/* 스위치 파트들 */}
       {showSwitch && (
         <>
           <KeyboardPart
@@ -423,6 +495,7 @@ const Model = ({
             partType="switch"
             size={size}
             centerOffset={centerOffset}
+            resetTrigger={resetTrigger}
           />
           <KeyboardPart
             key="top-switches"
@@ -433,36 +506,41 @@ const Model = ({
             size={size}
             color={switchColor}
             centerOffset={centerOffset}
+            resetTrigger={resetTrigger}
           />
         </>
       )}
 
-      {/* 개별 키캡 모델 렌더링 */}
+      {/* 개별 키캡 모델들 */}
       {showKeycap &&
         keycapIds.map((keycapId, index) => (
           <KeyboardPart
-            key={`keycap-${keycapId}`}
+            key={`keycap-${keycapId}-${resetTrigger}-${viewerMode ? 'viewer' : 'normal'}`}
             modelPath={`/keyboard/${size}keyboard/${size}keycaps/${keycapId}.glb`}
             index={index}
             animationProgress={keycapAnimationProgress}
             scale={scale}
             partType="keycap"
             size={size}
-            color={currentKeycapColors[keycapId] || null} // 현재 키캡 색상 적용
+            color={currentKeycapColors[keycapId] || null}
             centerOffset={centerOffset}
+            keycapColors={currentKeycapColors}
+            keycapIndex={keycapId}
+            resetTrigger={resetTrigger}
           />
         ))}
 
-      {/* 각인 모델 추가 */}
+      {/* 각인 모델 */}
       {showEngraving && (
         <KeyboardPart
-          key="engraving"
+          key={`engraving-${resetTrigger}-${viewerMode ? 'viewer' : 'normal'}`}
           modelPath={ENGRAVING_MODEL_PATH}
           animationProgress={engravingAnimationProgress}
           scale={scale}
-          partType="keycap" // 키캡과 동일한 애니메이션 파트 타입 사용
+          partType="keycap"
           size={size}
           centerOffset={centerOffset}
+          resetTrigger={resetTrigger}
         />
       )}
     </group>
