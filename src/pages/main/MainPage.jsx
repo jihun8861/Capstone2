@@ -3,6 +3,7 @@ import styled from "styled-components";
 import { MainBanner } from "../../components/home/MainBanner";
 import { ItemFrame1 } from "../../components/home/ItemFrame1";
 import { ItemFrame2 } from "../../components/home/ItemFrame2";
+import { ItemFrame3 } from "../../components/home/ItemFrame3";
 
 const Container = styled.div`
   display: flex;
@@ -64,14 +65,13 @@ export const MainPage = () => {
         <ItemFrame1 />
       </Frame1>
 
-      <Frame2 
-        ref={frame2Ref} 
-        style={{ opacity: isVisible ? 1 : 0 }}
-      >
+      <Frame2 ref={frame2Ref} style={{ opacity: isVisible ? 1 : 0 }}>
         <ItemFrame2 isVisible={isVisible} />
       </Frame2>
 
-      <Frame3>공유 컴포넌트</Frame3>
+      <Frame3>
+        <ItemFrame3 />
+      </Frame3>
     </Container>
   );
 };

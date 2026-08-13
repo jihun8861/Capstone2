@@ -7,8 +7,6 @@ export const saveItem = async (formData) => {
       formData,
       {
         headers: {
-          // multipart/form-data를 위해 명시적으로 content-type을 설정하지 않음
-          // axios가 자동으로 boundary와 함께 적절한 content-type을 설정함
         }
       }
     );

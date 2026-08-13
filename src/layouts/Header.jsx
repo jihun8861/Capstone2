@@ -28,7 +28,7 @@ const MenuIconWrapper = styled.div`
   align-items: center;
 `;
 
-const LogoWrapper = styled.div`
+const LogoWrapper = styled.a`
   flex: 1;
   display: flex;
   justify-content: center;
@@ -153,12 +153,29 @@ export const Header = () => {
     navigate("/");
   };
 
+  // 로고 클릭 시 세션 스토리지 삭제 및 홈으로 이동
+  const handleLogoClick = (e) => {
+    e.preventDefault(); // 기본 링크 동작 방지
+    
+    // 세션 스토리지 전체 삭제
+    sessionStorage.clear();
+    
+    // 또는 특정 키만 삭제하고 싶다면:
+    // sessionStorage.removeItem("specificKey");
+    // sessionStorage.removeItem("anotherKey");
+    
+    console.log("세션 스토리지가 삭제되었습니다.");
+    
+    // 홈으로 이동
+    navigate("/");
+  };
+
   return (
     <Container scrolled={scrolled} showBorder={showBorder}>
       <MenuIconWrapper>
         <MenuIcon scrolled={scrolled} />
       </MenuIconWrapper>
-      <LogoWrapper onClick={() => navigate("/")}>
+      <LogoWrapper href="/" onClick={handleLogoClick}>
         <LogoImage src={scrolled ? "/images/logo2.png" : "/images/logo1.png"} />
       </LogoWrapper>
       <Nav>

@@ -12,6 +12,7 @@
   "dependencies": {
     "@react-three/drei": "^10.0.4",
     "@react-three/fiber": "^9.1.0",
+    "@react-three/postprocessing": "^3.0.4",
     "axios": "^1.8.2",
     "firebase": "^11.4.0",
     "framer-motion": "^12.6.3",

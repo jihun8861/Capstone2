@@ -75,8 +75,36 @@ const ModelImage = styled.img`
 const MessageText = styled.p`
   text-align: center;
   font-size: 18px;
-  margin: 20px 0 40px;
+  margin: 20px 0;
   padding: 0 20px;
+`;
+
+// 제목 입력 필드 관련 스타일 컴포넌트 추가
+const TitleInputContainer = styled.div`
+  padding: 0 30px;
+  margin-bottom: 30px;
+`;
+
+const TitleLabel = styled.label`
+  display: block;
+  font-size: 16px;
+  font-weight: bold;
+  margin-bottom: 8px;
+  color: #333;
+`;
+
+const TitleInput = styled.input`
+  width: 100%;
+  padding: 12px 15px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 16px;
+  background-color: #f9f9f9;
+  &:focus {
+    outline: none;
+    border-color: #004aad;
+    box-shadow: 0 0 0 2px rgba(0, 74, 173, 0.2);
+  }
 `;
 
 const ButtonContainer = styled.div`
@@ -111,7 +139,10 @@ export const KeyboardModal = ({
   message, 
   confirmText = "확인", 
   cancelText = "취소",
-  title = "/images/custom.png"
+  title = "/images/custom.png",
+  showTitleInput = false, // 제목 입력 필드 표시 여부
+  titleValue = "", // 제목 값
+  onTitleChange = () => {} // 제목 변경 핸들러
 }) => {
   if (!isOpen) return null;
 
@@ -129,6 +160,21 @@ export const KeyboardModal = ({
             <ModelImage src={imageSrc} alt="미리보기 이미지" />
           </ModelImageContainer>
           <MessageText>{message}</MessageText>
+          
+          {/* 제목 입력 필드 - showTitleInput이 true일 때만 표시 */}
+          {showTitleInput && (
+            <TitleInputContainer>
+              <TitleLabel>디자인 제목</TitleLabel>
+              <TitleInput
+                type="text"
+                value={titleValue}
+                onChange={onTitleChange}
+                placeholder="디자인 제목을 입력해주세요"
+                required
+                autoFocus
+              />
+            </TitleInputContainer>
+          )}
         </ModalContent>
         <ButtonContainer>
           <ButtonHalf className="cancel" onClick={onClose}>

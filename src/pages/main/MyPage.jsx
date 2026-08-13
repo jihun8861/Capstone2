@@ -55,7 +55,7 @@ export const MyPage = () => {
         return <UserEdit />;
       case "나의 커스텀 키보드":
         return <MyCustomKeyboard />;
-      case "관심상품":
+      case "관심목록":
         return <FavoriteProducts />;
       default:
         return null;
@@ -65,7 +65,7 @@ export const MyPage = () => {
   return (
     <Container>
       <Sidebar>
-        {["회원정보 수정", "나의 커스텀 키보드", "관심상품"].map((menu) => (
+        {["회원정보 수정", "나의 커스텀 키보드", "관심목록"].map((menu) => (
           <MenuItem
             key={menu}
             $isActive={selectedMenu === menu}
