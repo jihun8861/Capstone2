@@ -1,7 +1,7 @@
 # ⌨️ CusKey
 
 <p align="center">
-  <img width="1600" height="500" alt="CusKey banner" src="./assets/banner.png" />
+  <img width="1600" height="500" alt="CusKey banner" src="./src/asset/banner.png" />
 </p>
 
 ---
@@ -59,9 +59,9 @@
     <th align="center">키캡 색상 지정</th>
   </tr>
   <tr>
-    <td><img src="./assets/barebone.gif" width="280" /></td>
-    <td><img src="./assets/switch.gif" width="280" /></td>
-    <td><img src="./assets/keycap.gif" width="280" /></td>
+    <td><img src="./src/asset/barebone.gif" width="280" /></td>
+    <td><img src="./src/asset/switch.gif" width="280" /></td>
+    <td><img src="./src/asset/keycap.gif" width="280" /></td>
   </tr>
 </table>
 
